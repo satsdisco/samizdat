@@ -1,0 +1,139 @@
+/* Editor — distraction-free writing */
+
+.editor-wrapper {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: var(--gutter);
+  min-height: calc(100vh - 120px);
+}
+
+.samizdat-editor {
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--text);
+}
+
+.samizdat-editor:focus {
+  outline: none;
+}
+
+/* Placeholder */
+.samizdat-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--text-faint);
+  pointer-events: none;
+  height: 0;
+  font-style: italic;
+}
+
+/* Headings */
+.samizdat-editor h1 {
+  font-family: var(--font-body);
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 2rem 0 1rem;
+  letter-spacing: -0.02em;
+}
+
+.samizdat-editor h2 {
+  font-family: var(--font-body);
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.8rem 0 0.8rem;
+}
+
+.samizdat-editor h3 {
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 1.5rem 0 0.6rem;
+}
+
+/* Paragraphs */
+.samizdat-editor p {
+  margin-bottom: 1.2rem;
+}
+
+/* Blockquotes */
+.samizdat-editor blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1.2rem;
+  margin: 1.5rem 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Code */
+.samizdat-editor code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--bg-secondary);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+}
+
+.samizdat-editor pre {
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+
+.samizdat-editor pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+/* Links */
+.samizdat-editor a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.samizdat-editor a:hover {
+  border-bottom-color: var(--accent);
+}
+
+/* Lists */
+.samizdat-editor ul,
+.samizdat-editor ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.samizdat-editor li {
+  margin-bottom: 0.4rem;
+}
+
+/* Horizontal rule */
+.samizdat-editor hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+/* Images */
+.samizdat-editor img {
+  max-width: 100%;
+  border-radius: 4px;
+  margin: 1.5rem 0;
+}
+
+/* Strong & emphasis */
+.samizdat-editor strong {
+  font-weight: 700;
+}
+
+.samizdat-editor em {
+  font-style: italic;
+}

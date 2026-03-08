@@ -1,0 +1,72 @@
+/* Samizdat — Underground publishing, beautiful writing */
+
+:root {
+  /* Paper & ink */
+  --bg: #faf9f6;
+  --bg-secondary: #f0eee9;
+  --text: #1a1a1a;
+  --text-secondary: #6b6b6b;
+  --text-faint: #a0a0a0;
+  --accent: #c0392b;
+  --accent-hover: #a93226;
+  --border: #e0ddd6;
+  --selection: rgba(192, 57, 43, 0.15);
+
+  /* Typography */
+  --font-body: 'Source Serif 4', 'Georgia', serif;
+  --font-ui: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+
+  /* Spacing */
+  --content-width: 680px;
+  --gutter: 2rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --bg-secondary: #222222;
+    --text: #e8e6e1;
+    --text-secondary: #999;
+    --text-faint: #555;
+    --accent: #e74c3c;
+    --accent-hover: #c0392b;
+    --border: #333;
+    --selection: rgba(231, 76, 60, 0.2);
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 18px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
