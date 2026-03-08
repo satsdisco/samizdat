@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import type { RelayInfo } from '../types/nostr'
 import './TitleBar.css'
 
@@ -80,7 +81,7 @@ export function TitleBar({
             </svg>
           </button>
         )}
-        <span className="titlebar-logo">samizdat</span>
+        <Link to="/read" className="titlebar-logo" title="The Press">samizdat</Link>
       </div>
 
       <div className="titlebar-center">

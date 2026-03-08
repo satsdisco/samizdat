@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { markdownToHtml } from '../lib/markdown'
 import { fetchArticleByNaddr, fetchProfile, fetchComments, type ArticleData, type CommentData } from '../lib/reader'
 import { DEFAULT_RELAYS } from '../lib/nostr'
@@ -187,7 +187,7 @@ export function ArticleReader() {
     <div className="reader-page">
       {/* Minimal nav */}
       <nav className="reader-nav">
-        <a href="/" className="reader-wordmark">samizdat</a>
+        <Link to="/read" className="reader-wordmark">samizdat</Link>
         <a href="/" className="reader-write-btn">Start writing</a>
       </nav>
 

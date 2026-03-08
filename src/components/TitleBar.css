@@ -18,6 +18,12 @@
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.titlebar-logo:hover {
+  color: var(--accent);
 }
 
 .titlebar-left,
