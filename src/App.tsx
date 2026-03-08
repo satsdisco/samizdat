@@ -1,30 +1,185 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { TitleBar } from './components/TitleBar'
-import { Editor } from './components/Editor'
+import { Editor, type EditorRef } from './components/Editor'
+import { Sidebar } from './components/Sidebar'
+import { PublishModal } from './components/PublishModal'
+import { Toast } from './components/Toast'
+import { Preview } from './components/Preview'
+import { LoginScreen } from './components/LoginScreen'
+import { useNostr } from './hooks/useNostr'
+import type { Article } from './types/nostr'
 import './styles/theme.css'
 
 function App() {
-  const [wordCount, setWordCount] = useState(0)
+  const [nostr, actions] = useNostr()
+  const editorRef = useRef<EditorRef>(null)
 
-  const handleContentChange = (html: string) => {
+  // Editor state
+  const [title, setTitle] = useState('')
+  const [wordCount, setWordCount] = useState(0)
+  const [currentHtml, setCurrentHtml] = useState('')
+  const [currentSlug, setCurrentSlug] = useState<string | undefined>()
+  const [currentPublishedAt, setCurrentPublishedAt] = useState<number | undefined>()
+  const [bannerImage, setBannerImage] = useState('')
+
+  // UI state
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [showPublishModal, setShowPublishModal] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+
+  const handleContentChange = useCallback((html: string) => {
+    setCurrentHtml(html)
     const text = html.replace(/<[^>]*>/g, ' ').trim()
     const words = text ? text.split(/\s+/).filter(w => w.length > 0).length : 0
     setWordCount(words)
-  }
+  }, [])
 
-  const handlePublish = () => {
-    // TODO: NIP-23 publishing
-    console.log('Publishing to Nostr...')
+  // Auto-save title to localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('samizdat_draft_title')
+    if (saved) setTitle(saved)
+  }, [])
+
+  useEffect(() => {
+    if (title) localStorage.setItem('samizdat_draft_title', title)
+  }, [title])
+
+  // Load articles when connected
+  useEffect(() => {
+    if (nostr.isConnected && nostr.articles.length === 0) {
+      actions.loadArticles()
+    }
+  }, [nostr.isConnected])
+
+  // Publish flow
+  const handlePublish = useCallback((options: { summary: string; tags: string[]; image: string }) => {
+    actions.publish(title, currentHtml, {
+      summary: options.summary,
+      tags: options.tags,
+      image: options.image || bannerImage,
+      slug: currentSlug,
+      isDraft: false,
+      existingPublishedAt: currentPublishedAt,
+    })
+  }, [title, currentHtml, currentSlug, currentPublishedAt, actions])
+
+  // Save draft
+  const handleSaveDraft = useCallback(() => {
+    actions.publish(title, currentHtml, {
+      slug: currentSlug,
+      isDraft: true,
+    })
+  }, [title, currentHtml, currentSlug, actions])
+
+  // Load an article into the editor
+  const handleLoadArticle = useCallback((article: Article) => {
+    setTitle(article.title)
+    setCurrentSlug(article.slug)
+    setCurrentPublishedAt(article.publishedAt)
+    setBannerImage(article.image || '')
+    editorRef.current?.loadMarkdown(article.content)
+    setShowSidebar(false)
+  }, [])
+
+  // New article
+  const handleNewArticle = useCallback(() => {
+    setTitle('')
+    setCurrentSlug(undefined)
+    setCurrentPublishedAt(undefined)
+    setBannerImage('')
+    editorRef.current?.clear()
+    setShowSidebar(false)
+    localStorage.removeItem('samizdat_draft_title')
+  }, [])
+
+  // Dismiss publish result
+  useEffect(() => {
+    if (nostr.publishResult?.success) {
+      setShowPublishModal(false)
+    }
+  }, [nostr.publishResult])
+
+  // Show login screen if not authenticated
+  if (!nostr.pubkey) {
+    return (
+      <LoginScreen
+        onExtensionLogin={actions.loginWithExtension}
+        onBunkerLogin={actions.loginWithBunker}
+        onNsecLogin={actions.loginWithNsec}
+        onQrLogin={actions.initiateQrLogin}
+        isLoggingIn={nostr.isLoggingIn}
+        loginError={nostr.loginError}
+        hasExtension={typeof window !== 'undefined' && !!window.nostr}
+      />
+    )
   }
 
   return (
     <div className="app">
-      <TitleBar 
+      <TitleBar
         wordCount={wordCount}
-        onPublish={handlePublish}
-        isConnected={false}
+        onPublish={() => setShowPublishModal(true)}
+        onSaveDraft={handleSaveDraft}
+        onPreview={() => setShowPreview(true)}
+        isConnected={nostr.isConnected}
+        isPublishing={nostr.isPublishing}
+        pubkey={nostr.pubkey}
+        npubShort={nostr.npubShort}
+        profile={nostr.profile}
+        onLogin={actions.loginWithExtension}
+        onLogout={actions.logout}
+        isLoggingIn={nostr.isLoggingIn}
+        relayCount={nostr.relays.length}
+        onToggleSidebar={() => setShowSidebar(!showSidebar)}
       />
-      <Editor onContentChange={handleContentChange} />
+
+      <Editor
+        ref={editorRef}
+        title={title}
+        onTitleChange={setTitle}
+        onContentChange={handleContentChange}
+        bannerImage={bannerImage}
+        onBannerChange={setBannerImage}
+      />
+
+      <Sidebar
+        articles={nostr.articles}
+        drafts={nostr.drafts}
+        isLoading={nostr.isLoadingArticles}
+        isOpen={showSidebar}
+        onClose={() => setShowSidebar(false)}
+        onLoadArticle={handleLoadArticle}
+        onNewArticle={handleNewArticle}
+        onRefresh={actions.loadArticles}
+      />
+
+      {showPreview && (
+        <Preview
+          title={title}
+          bannerImage={bannerImage}
+          html={currentHtml}
+          profile={nostr.profile}
+          npubShort={nostr.npubShort}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+
+      {showPublishModal && (
+        <PublishModal
+          title={title}
+          onPublish={handlePublish}
+          onClose={() => setShowPublishModal(false)}
+          isPublishing={nostr.isPublishing}
+        />
+      )}
+
+      {nostr.publishResult && (
+        <Toast
+          message={nostr.publishResult.message}
+          type={nostr.publishResult.success ? 'success' : 'error'}
+          onClose={actions.clearPublishResult}
+        />
+      )}
     </div>
   )
 }

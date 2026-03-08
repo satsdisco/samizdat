@@ -20,15 +20,18 @@
     "@tiptap/starter-kit": "^3.20.1",
     "markdown-it": "^14.1.1",
     "nostr-tools": "^2.23.3",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "turndown": "^7.2.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",

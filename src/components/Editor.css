@@ -7,6 +7,148 @@
   min-height: calc(100vh - 120px);
 }
 
+/* Banner area */
+.banner-area {
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+}
+
+.banner-area:not(.has-image) {
+  border: 2px dashed var(--border);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.banner-area:not(.has-image):hover {
+  border-color: var(--text-faint);
+  background: var(--bg-secondary);
+}
+
+.banner-area.uploading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.banner-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: var(--text-faint);
+}
+
+.banner-placeholder span {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+}
+
+.banner-img {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  display: block;
+}
+
+.banner-actions {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  display: flex;
+  gap: 0.4rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.banner-area:hover .banner-actions {
+  opacity: 1;
+}
+
+.banner-action-btn {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s;
+}
+
+.banner-action-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.banner-action-btn.danger:hover {
+  background: var(--accent);
+}
+
+/* Editor toolbar */
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--bg-secondary);
+  border-color: var(--border);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.upload-status {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* Title input */
+.title-input {
+  font-family: var(--font-body);
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  background: none;
+  border: none;
+  outline: none;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+
+.title-input::placeholder {
+  color: var(--text-faint);
+}
+
 .samizdat-editor {
   outline: none;
   font-family: var(--font-body);

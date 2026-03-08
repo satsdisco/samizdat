@@ -32,11 +32,24 @@
   justify-content: flex-end;
 }
 
+.titlebar-center {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .word-count {
   font-family: var(--font-ui);
   font-size: 0.75rem;
   color: var(--text-faint);
   letter-spacing: 0.05em;
+}
+
+/* Relay status */
+.relay-status {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .connection-dot {
@@ -51,18 +64,71 @@
   background: #27ae60;
 }
 
-.publish-btn {
+.relay-count {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+
+/* Sidebar toggle */
+.sidebar-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.sidebar-toggle:hover {
+  color: var(--text);
+  background: var(--bg-secondary);
+}
+
+/* Preview button */
+.preview-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+}
+
+.preview-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--text-secondary);
+}
+
+.preview-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Buttons */
+.publish-btn,
+.draft-btn,
+.login-btn {
   font-family: var(--font-ui);
   font-size: 0.8rem;
   font-weight: 500;
   padding: 0.4rem 1rem;
-  border: 1px solid var(--accent);
-  background: transparent;
-  color: var(--accent);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
   letter-spacing: 0.02em;
+}
+
+.publish-btn {
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
 }
 
 .publish-btn:hover:not(:disabled) {
@@ -70,7 +136,70 @@
   color: white;
 }
 
-.publish-btn:disabled {
+.draft-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.draft-btn:hover:not(:disabled) {
+  border-color: var(--text-secondary);
+  color: var(--text);
+}
+
+.login-btn {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.login-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.publish-btn:disabled,
+.draft-btn:disabled,
+.login-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* User button */
+.user-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  transition: opacity 0.2s;
+}
+
+.user-btn:hover {
+  opacity: 0.8;
+}
+
+.user-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-initial {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  background: var(--accent);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
 }
