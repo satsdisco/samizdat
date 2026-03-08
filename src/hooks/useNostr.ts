@@ -214,7 +214,7 @@ export function useNostr(): [NostrState, NostrActions] {
       const clientSk = generateSecretKey()
       const clientPk = getPublicKey(clientSk)
 
-      // Use well-known relays for the handshake
+      // NIP-46 handshake relays — nsec.app is purpose-built for this
       const connectRelays = ['wss://relay.nsec.app', 'wss://relay.damus.io']
       const secret = Math.random().toString(36).slice(2, 10)
 
@@ -224,26 +224,38 @@ export function useNostr(): [NostrState, NostrActions] {
         secret,
         name: 'Samizdat',
         url: window.location.origin,
-        perms: ['sign_event:30023', 'sign_event:30024', 'sign_event:27235', 'get_public_key'],
+        perms: ['sign_event:30023', 'sign_event:30024', 'sign_event:27235', 'sign_event:30001', 'sign_event:10003', 'sign_event:1', 'sign_event:7', 'get_public_key'],
       })
 
-      // Start listening IMMEDIATELY so we don't miss Amber's response
       setIsLoggingIn(true)
-      const signerPromise = BunkerSigner.fromURI(clientSk, uri, {}, 120000) // 2 min timeout
 
       const waitForConnection = async () => {
-        try {
-          const signer = await signerPromise
-          const pk = await signer.getPublicKey()
-
-          bunkerSignerRef.current = signer
-          saveAuth(pk, 'bunker')
-          await fetchUserData(pk)
-        } catch (e: any) {
-          setLoginError(e.message || 'QR login timed out or was rejected')
-        } finally {
-          setIsLoggingIn(false)
+        // Retry logic: mobile browsers kill WebSockets when app-switching.
+        // Try up to 3 times with fresh connections.
+        const maxRetries = 3
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 90000)
+            const pk = await signer.getPublicKey()
+            bunkerSignerRef.current = signer
+            saveAuth(pk, 'bunker')
+            await fetchUserData(pk)
+            return // success
+          } catch (e: any) {
+            const msg = e.message || ''
+            // Only retry on connection/subscription errors, not auth rejections
+            if (attempt < maxRetries && (msg.includes('subscription') || msg.includes('closed') || msg.includes('WebSocket') || msg.includes('timeout'))) {
+              console.log(`QR login attempt ${attempt} failed (${msg}), retrying...`)
+              continue
+            }
+            setLoginError(
+              msg.includes('subscription') || msg.includes('closed')
+                ? 'Connection dropped — this happens on mobile when switching apps. Try "Copy link instead" and paste in your signer app.'
+                : msg || 'QR login timed out or was rejected'
+            )
+          }
         }
+        setIsLoggingIn(false)
       }
 
       return { uri, waitForConnection }
