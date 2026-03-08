@@ -822,15 +822,56 @@
   }
 
   .press-write-link {
-    display: none;
+    font-size: 0.6rem;
+    padding: 0.3rem 0.6rem;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  .press-wordmark {
+    font-size: 0.85rem;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
   }
 
   .press-tab {
     font-size: 0.6rem;
-    padding: 0.25rem 0.5rem;
+    padding: 0.3rem 0.5rem;
+    min-height: 36px;
+  }
+
+  .press-relay-btn {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
   }
 
   .press-login-prompt {
     padding: 0 1rem;
+  }
+
+  .press-relay-panel {
+    padding: 0 1rem;
+  }
+
+  .press-section-header {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .press-curate-panel {
+    padding: 0.6rem;
+  }
+
+  .press-curate-input {
+    font-size: 0.7rem;
+  }
+
+  .press-show-more {
+    padding: 0.8rem 0;
+    font-size: 0.72rem;
+    min-height: 44px;
   }
 }

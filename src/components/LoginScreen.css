@@ -388,6 +388,26 @@
     font-size: 1.2rem;
   }
 
+  .login-method {
+    min-height: 56px;
+    padding: 1rem;
+  }
+
+  .login-method-title {
+    font-size: 0.85rem;
+  }
+
+  .login-btn {
+    min-height: 48px;
+    font-size: 0.85rem;
+  }
+
+  .login-input,
+  .login-field input {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+
   .qr-container canvas,
   .qr-container svg {
     max-width: 200px !important;
