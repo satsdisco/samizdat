@@ -98,30 +98,13 @@ function formatDate(ts: number): string {
   })
 }
 
-// Generate a consistent color from a string (pubkey or title)
-function hashColor(str: string): string {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  const hue = Math.abs(hash % 360)
-  return `hsl(${hue}, 25%, 18%)`
-}
-
 function ArticleCard({ article, onBookmark }: { article: PressArticle; onBookmark?: (id: string) => void }) {
-  const initial = (article.title || '?')[0].toUpperCase()
-  const bgColor = hashColor(article.pubkey)
-
   return (
     <div className="press-card-wrap">
-      <Link to={`/a/${article.naddr}`} className="press-card">
-        {article.image ? (
+      <Link to={`/a/${article.naddr}`} className={`press-card ${!article.image ? 'press-card-no-image' : ''}`}>
+        {article.image && (
           <div className="press-card-thumb">
             <img src={article.image} alt="" loading="lazy" />
-          </div>
-        ) : (
-          <div className="press-card-thumb press-card-thumb-placeholder" style={{ background: bgColor }}>
-            <span className="press-card-initial">{initial}</span>
           </div>
         )}
         <div className="press-card-text">
