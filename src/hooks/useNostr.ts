@@ -58,6 +58,7 @@ interface NostrActions {
   }) => Promise<void>
   loadArticles: () => Promise<void>
   clearPublishResult: () => void
+  signEvent: (event: any) => Promise<any>
 }
 
 const STORAGE_KEY = 'samizdat_pubkey'
@@ -377,6 +378,7 @@ export function useNostr(): [NostrState, NostrActions] {
     loginWithNsec,
     initiateQrLogin,
     logout: clearAuth,
+    signEvent,
     publish,
     loadArticles,
     clearPublishResult,

@@ -145,6 +145,7 @@ function App() {
         onContentChange={handleContentChange}
         bannerImage={bannerImage}
         onBannerChange={setBannerImage}
+        signEvent={actions.signEvent}
       />
 
       <Sidebar

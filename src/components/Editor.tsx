@@ -6,7 +6,7 @@ import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import { useImperativeHandle, forwardRef, useCallback, useState } from 'react'
 import { markdownToHtml } from '../lib/markdown'
-import { uploadImage } from '../lib/upload'
+import { uploadImage, type SignEventFn } from '../lib/upload'
 import './Editor.css'
 
 interface EditorProps {
@@ -15,6 +15,7 @@ interface EditorProps {
   title: string
   bannerImage?: string
   onBannerChange?: (url: string) => void
+  signEvent?: SignEventFn
 }
 
 export interface EditorRef {
@@ -30,6 +31,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({
   title,
   bannerImage,
   onBannerChange,
+  signEvent,
 }, ref) => {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState('')
@@ -43,7 +45,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({
     setUploadProgress('Uploading image…')
 
     try {
-      const result = await uploadImage(file)
+      const result = await uploadImage(file, signEvent)
       editor.chain().focus().setImage({ src: result.url }).run()
       setUploadProgress('')
     } catch (e: any) {
@@ -135,7 +137,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({
       if (!file) return
       setIsBannerUploading(true)
       try {
-        const result = await uploadImage(file)
+        const result = await uploadImage(file, signEvent)
         onBannerChange?.(result.url)
       } catch (e: any) {
         setUploadProgress(`Banner upload failed: ${e.message}`)
