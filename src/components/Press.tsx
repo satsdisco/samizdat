@@ -22,6 +22,24 @@ const FALLBACK_AUTHORS = [
 
 const CURATION_LIST_D_TAG = 'samizdat-editors-picks'
 
+// Press relay management — persisted to localStorage
+const PRESS_RELAYS_KEY = 'samizdat_press_relays'
+
+function getPressRelays(): string[] {
+  try {
+    const saved = localStorage.getItem(PRESS_RELAYS_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch {}
+  return [...DEFAULT_RELAYS]
+}
+
+function savePressRelays(relays: string[]) {
+  localStorage.setItem(PRESS_RELAYS_KEY, JSON.stringify(relays))
+}
+
 // Fetch a NIP-51 curation list (kind 30001) from a specific pubkey
 async function fetchCurationList(pool: SimplePool, relays: string[], authorPubkey: string): Promise<string[]> {
   try {
@@ -252,18 +270,19 @@ export function Press() {
       const pool = new SimplePool()
       try {
         // Fetch editor's curation list
-        const curatedAuthors = await fetchCurationList(pool, DEFAULT_RELAYS, EDITOR_PUBKEY)
+        const relays = getPressRelays()
+        const curatedAuthors = await fetchCurationList(pool, relays, EDITOR_PUBKEY)
         const authors = curatedAuthors.length > 0 ? curatedAuthors : FALLBACK_AUTHORS
         setCuratedPubkeys(authors)
 
         // Fetch editor profile
-        const ep = await fetchProfile(EDITOR_PUBKEY, DEFAULT_RELAYS).catch(() => null)
+        const ep = await fetchProfile(EDITOR_PUBKEY, relays).catch(() => null)
         setEditorProfile(ep)
 
         const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60
         const [curatedEvents, recentEvents] = await Promise.all([
-          pool.querySync(DEFAULT_RELAYS, { kinds: [30023], authors, limit: 20 }),
-          pool.querySync(DEFAULT_RELAYS, { kinds: [30023], limit: 80, since: thirtyDaysAgo }),
+          pool.querySync(relays, { kinds: [30023], authors, limit: 20 }),
+          pool.querySync(relays, { kinds: [30023], limit: 80, since: thirtyDaysAgo }),
         ])
 
         const allArticles = processEvents(curatedEvents, recentEvents, authors)
@@ -273,7 +292,7 @@ export function Press() {
         if (freshCandidates.length > 0) {
           const articleIds = freshCandidates.map(a => a.id)
           try {
-            const reactions = await pool.querySync(DEFAULT_RELAYS, {
+            const reactions = await pool.querySync(relays, {
               kinds: [7, 9735], // likes + zaps
               '#e': articleIds,
               limit: 300,
@@ -325,7 +344,7 @@ export function Press() {
       } catch (e) {
         console.error('Failed to load press:', e)
       } finally {
-        pool.close(DEFAULT_RELAYS)
+        pool.close(getPressRelays())
         setLoading(false)
       }
     }
@@ -340,7 +359,7 @@ export function Press() {
       setFeedLoading(true)
       const pool = new SimplePool()
       try {
-        const follows = await fetchFollowList(pool, DEFAULT_RELAYS, loggedInPubkey!)
+        const follows = await fetchFollowList(pool, getPressRelays(), loggedInPubkey!)
         if (follows.length === 0) {
           setFeedArticles([])
           setFeedLoaded(true)
@@ -350,7 +369,7 @@ export function Press() {
 
         // Fetch articles from followed authors (batch in chunks to avoid huge queries)
         const chunk = follows.slice(0, 50) // first 50 follows
-        const events = await pool.querySync(DEFAULT_RELAYS, {
+        const events = await pool.querySync(getPressRelays(), {
           kinds: [30023],
           authors: chunk,
           limit: 40,
@@ -363,7 +382,7 @@ export function Press() {
       } catch (e) {
         console.error('Failed to load feed:', e)
       } finally {
-        pool.close(DEFAULT_RELAYS)
+        pool.close(getPressRelays())
         setFeedLoading(false)
       }
     }
@@ -378,7 +397,7 @@ export function Press() {
       setBookmarksLoading(true)
       const pool = new SimplePool()
       try {
-        const ids = await fetchBookmarks(pool, DEFAULT_RELAYS, loggedInPubkey!)
+        const ids = await fetchBookmarks(pool, getPressRelays(), loggedInPubkey!)
         setBookmarkIds(new Set(ids))
 
         if (ids.length === 0) {
@@ -388,7 +407,7 @@ export function Press() {
           return
         }
 
-        const events = await pool.querySync(DEFAULT_RELAYS, {
+        const events = await pool.querySync(getPressRelays(), {
           kinds: [30023],
           ids: ids.slice(0, 20),
         })
@@ -400,7 +419,7 @@ export function Press() {
       } catch (e) {
         console.error('Failed to load bookmarks:', e)
       } finally {
-        pool.close(DEFAULT_RELAYS)
+        pool.close(getPressRelays())
         setBookmarksLoading(false)
       }
     }
@@ -437,7 +456,7 @@ export function Press() {
         content: '',
       }
       const signed = await window.nostr.signEvent(event)
-      await publishToRelays(signed, DEFAULT_RELAYS)
+      await publishToRelays(signed, getPressRelays())
     } catch (e) {
       console.error('Failed to publish bookmark:', e)
       // Revert on failure
@@ -445,6 +464,38 @@ export function Press() {
       setBookmarkIds(newIds)
     }
   }, [loggedInPubkey, bookmarkIds])
+
+  // Relay settings
+  const [pressRelays, setPressRelays] = useState<string[]>(getPressRelays)
+  const [showRelaySettings, setShowRelaySettings] = useState(false)
+  const [relayInput, setRelayInput] = useState('')
+
+  const handleAddRelay = useCallback(() => {
+    let url = relayInput.trim()
+    if (!url) return
+    if (!url.startsWith('wss://') && !url.startsWith('ws://')) url = 'wss://' + url
+    if (pressRelays.includes(url)) { setRelayInput(''); return }
+    const updated = [...pressRelays, url]
+    setPressRelays(updated)
+    savePressRelays(updated)
+    setRelayInput('')
+    // Clear cache to refetch with new relay
+    sessionStorage.removeItem('samizdat_press_cache')
+  }, [relayInput, pressRelays])
+
+  const handleRemoveRelay = useCallback((url: string) => {
+    const updated = pressRelays.filter(r => r !== url)
+    if (updated.length === 0) return // don't allow empty
+    setPressRelays(updated)
+    savePressRelays(updated)
+    sessionStorage.removeItem('samizdat_press_cache')
+  }, [pressRelays])
+
+  const handleResetRelays = useCallback(() => {
+    setPressRelays([...DEFAULT_RELAYS])
+    savePressRelays([...DEFAULT_RELAYS])
+    sessionStorage.removeItem('samizdat_press_cache')
+  }, [])
 
   // Curated articles (by naddr)
   const [curatedArticleAddrs, setCuratedArticleAddrs] = useState<{ kind: number; pubkey: string; identifier: string; naddr: string }[]>([])
@@ -469,7 +520,7 @@ export function Press() {
           // Also add author if not already there
           if (!curatedPubkeys.includes(data.pubkey)) {
             setCuratedPubkeys(prev => [...prev, data.pubkey])
-            const profile = await fetchProfile(data.pubkey, DEFAULT_RELAYS)
+            const profile = await fetchProfile(data.pubkey, getPressRelays())
             if (profile) setCuratedProfiles(prev => new Map(prev).set(data.pubkey, profile))
           }
           setCurateInput('')
@@ -507,7 +558,7 @@ export function Press() {
       setCuratedPubkeys(prev => [...prev, hex])
       setCurateInput('')
       setCurateStatus('')
-      const profile = await fetchProfile(hex, DEFAULT_RELAYS)
+      const profile = await fetchProfile(hex, getPressRelays())
       if (profile) setCuratedProfiles(prev => new Map(prev).set(hex, profile))
     } catch (e: any) {
       setCurateStatus('Invalid input — use npub, naddr, or article link')
@@ -546,7 +597,7 @@ export function Press() {
 
       // Publish with timeout per relay
       const results = await Promise.allSettled(
-        DEFAULT_RELAYS.map(async url => {
+        getPressRelays().map(async url => {
           const controller = new AbortController()
           const timeout = setTimeout(() => controller.abort(), 8000)
           try {
@@ -604,9 +655,55 @@ export function Press() {
               </>
             )}
           </div>
+          <button
+            className="press-relay-btn"
+            onClick={() => setShowRelaySettings(!showRelaySettings)}
+            title="Relay settings"
+          >
+            ⚡ {pressRelays.length}
+          </button>
           <Link to="/" className="press-write-link">Start Writing →</Link>
         </div>
       </nav>
+
+      {/* Relay settings panel */}
+      {showRelaySettings && (
+        <div className="press-relay-panel">
+          <div className="press-relay-panel-inner">
+            <div className="press-relay-header">
+              <h3>Relay Settings</h3>
+              <button className="press-relay-close" onClick={() => setShowRelaySettings(false)}>×</button>
+            </div>
+            <p className="press-relay-desc">
+              These relays are used for reading articles on the Press page. Add your own relay to see content from it.
+            </p>
+            <div className="press-relay-list">
+              {pressRelays.map(url => (
+                <div key={url} className="press-relay-item">
+                  <span className="press-relay-url">{url.replace('wss://', '')}</span>
+                  {pressRelays.length > 1 && (
+                    <button className="press-relay-remove" onClick={() => handleRemoveRelay(url)}>×</button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="press-relay-add">
+              <input
+                type="text"
+                placeholder="wss://relay.example.com"
+                value={relayInput}
+                onChange={e => setRelayInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddRelay()}
+                className="press-relay-input"
+              />
+              <button className="press-relay-add-btn" onClick={handleAddRelay}>Add</button>
+            </div>
+            <button className="press-relay-reset" onClick={handleResetRelays}>
+              Reset to defaults
+            </button>
+          </div>
+        </div>
+      )}
 
       <header className="press-header">
         <div className="press-rule-heavy" />
@@ -913,7 +1010,7 @@ function eventsToArticles(events: any[]): PressArticle[] {
         zapGated: e.tags.some((t: string[]) => t[0] === 'zap_gate'),
         naddr: nip19.naddrEncode({
           kind: 30023, pubkey: e.pubkey, identifier: slug,
-          relays: DEFAULT_RELAYS.slice(0, 2),
+          relays: getPressRelays().slice(0, 2),
         }),
       } as PressArticle
     })
@@ -945,7 +1042,7 @@ async function attachProfiles(_pool: SimplePool, articles: PressArticle[]) {
   const profiles = new Map<string, PressArticle['author']>()
   await Promise.allSettled(
     pubkeys.slice(0, 15).map(async pk => {
-      const p = await fetchProfile(pk, DEFAULT_RELAYS)
+      const p = await fetchProfile(pk, getPressRelays())
       if (p) profiles.set(pk, p)
     })
   )

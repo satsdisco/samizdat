@@ -76,6 +76,151 @@
   transition: opacity 0.15s;
 }
 
+.press-relay-btn {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 0.2rem 0.5rem;
+  background: transparent;
+  border: 1px solid #222;
+  border-radius: 3px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.press-relay-btn:hover {
+  border-color: #444;
+  color: #aaa;
+}
+
+/* Relay settings panel */
+.press-relay-panel {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.press-relay-panel-inner {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.press-relay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.press-relay-header h3 {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ccc;
+  margin: 0;
+}
+
+.press-relay-close {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.press-relay-close:hover { color: #ccc; }
+
+.press-relay-desc {
+  font-family: var(--font-ui);
+  font-size: 0.65rem;
+  color: #555;
+  margin: 0 0 0.6rem;
+}
+
+.press-relay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.6rem;
+}
+
+.press-relay-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0.5rem;
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 3px;
+}
+
+.press-relay-url {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #999;
+}
+
+.press-relay-remove {
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0 0.2rem;
+}
+
+.press-relay-remove:hover { color: #c0392b; }
+
+.press-relay-add {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.press-relay-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 0.3rem 0.5rem;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 3px;
+  color: #ccc;
+}
+
+.press-relay-input:focus {
+  outline: none;
+  border-color: #444;
+}
+
+.press-relay-add-btn {
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  padding: 0.3rem 0.6rem;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.press-relay-add-btn:hover { background: #222; }
+
+.press-relay-reset {
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  padding: 0;
+}
+
+.press-relay-reset:hover { color: #888; }
+
 .press-write-link:hover { opacity: 0.8; }
 
 /* Header — newspaper dateline */
