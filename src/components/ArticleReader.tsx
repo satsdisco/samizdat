@@ -31,6 +31,7 @@ export function ArticleReader() {
   const [error, setError] = useState<string | null>(null)
   const [commentText, setCommentText] = useState('')
   const [isCommenting, setIsCommenting] = useState(false)
+  const [unlocking, setUnlocking] = useState(false)
 
   useEffect(() => {
     if (!naddr) return
@@ -148,8 +149,6 @@ export function ArticleReader() {
   } else {
     bodyHtml = markdownToHtml(article.content)
   }
-
-  const [unlocking, setUnlocking] = useState(false)
 
   const handleUnlock = async () => {
     if (!article) return
