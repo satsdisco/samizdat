@@ -3,6 +3,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { Article, RelayInfo, NostrEvent } from '../types/nostr'
+import { setSecretKey as setSharedSecretKey } from '../lib/signer'
 import {
   fetchRelayList,
   fetchProfile,
@@ -108,6 +109,7 @@ export function useNostr(): [NostrState, NostrActions] {
     setPublishResult(null)
     setLoginError(null)
     secretKeyRef.current = null
+    setSharedSecretKey(null)
     if (bunkerSignerRef.current) {
       bunkerSignerRef.current.close?.()
       bunkerSignerRef.current = null
@@ -193,6 +195,7 @@ export function useNostr(): [NostrState, NostrActions] {
 
       const pk = getPublicKey(sk)
       secretKeyRef.current = sk
+      setSharedSecretKey(sk)
       saveAuth(pk, 'nsec')
       await fetchUserData(pk)
     } catch (e: any) {

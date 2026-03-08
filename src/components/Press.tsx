@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { SimplePool } from 'nostr-tools'
 import { nip19 } from 'nostr-tools'
 import { DEFAULT_RELAYS, fetchProfile, publishToRelays } from '../lib/nostr'
+import { signEvent, canSign } from '../lib/signer'
 import './Press.css'
 
 // Default editor — satsdisco's pubkey (site creator)
@@ -428,7 +429,7 @@ export function Press() {
 
   // === BOOKMARK AN ARTICLE ===
   const handleBookmark = useCallback(async (articleId: string) => {
-    if (!window.nostr || !loggedInPubkey) return
+    if (!canSign() || !loggedInPubkey) return
 
     const newIds = new Set(bookmarkIds)
     const isRemoving = newIds.has(articleId)
@@ -455,7 +456,7 @@ export function Press() {
         tags: [...newIds].map(id => ['e', id]),
         content: '',
       }
-      const signed = await window.nostr.signEvent(event)
+      const signed = await signEvent(event)
       await publishToRelays(signed, getPressRelays())
     } catch (e) {
       console.error('Failed to publish bookmark:', e)
@@ -503,7 +504,9 @@ export function Press() {
   // === CURATION EDITOR ===
   const handleAddCuration = useCallback(async () => {
     if (!curateInput.trim()) return
-    const input = curateInput.trim()
+    let input = curateInput.trim()
+    // Strip nostr: URI prefix (clients like Primal copy links this way)
+    if (input.startsWith('nostr:')) input = input.slice(6)
     setCurateStatus('Looking up…')
     try {
       // Try naddr (specific article)
@@ -543,6 +546,7 @@ export function Press() {
 
       // Try npub (author)
       let hex = input
+      if (hex.startsWith('nostr:')) hex = hex.slice(6)
       if (hex.startsWith('npub')) {
         const decoded = nip19.decode(hex)
         if (decoded.type === 'npub') hex = decoded.data as string
@@ -574,8 +578,8 @@ export function Press() {
   }, [])
 
   const handlePublishList = useCallback(async () => {
-    if (!window.nostr) {
-      setCurateStatus('No nostr extension found — install Alby or nos2x')
+    if (!canSign()) {
+      setCurateStatus('No signer available — sign in first')
       return
     }
     if (curatedPubkeys.length === 0 && curatedArticleAddrs.length === 0) return
@@ -593,7 +597,7 @@ export function Press() {
         ],
         content: '',
       }
-      const signed = await window.nostr.signEvent(event)
+      const signed = await signEvent(event)
 
       // Publish with timeout per relay
       const results = await Promise.allSettled(
