@@ -1,21 +1,51 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { SimplePool } from 'nostr-tools'
 import { nip19 } from 'nostr-tools'
 import { DEFAULT_RELAYS, fetchProfile } from '../lib/nostr'
 import './Press.css'
 
-// Curated writers — hex pubkeys of known quality NIP-23 authors
-const CURATED_AUTHORS = [
+// Fallback curated authors (used when no curation list found on nostr)
+const FALLBACK_AUTHORS = [
   '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93', // dergigi
   '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // ODELL
   '84dee6e676e5bb67b4ad4e042cf70cbd8681155db535942fcc6a0533858a7240', // Snowden
   '472f440f29ef996e92a186b8d320ff180c855903882e59d50de1b8571a76b032', // Marty Bent
   'e88a691e98d9987c964521dff60025f60700378a4879180dcbbb4a5027850411', // NVK
-  '7bdef7be22dd8e59f4600e044aa53a1cf975a9dc7d27df5833bc77db784a5805', // hzrd149 (nostr dev)
+  '7bdef7be22dd8e59f4600e044aa53a1cf975a9dc7d27df5833bc77db784a5805', // hzrd149
   'd61f3bc5b3eb4400efdae6169a5c17cabf3246b514361de939ce4a1a0da6ef4a', // miljan
-  '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // jack (dorsey)
+  '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // jack
 ]
+
+// NIP-51 list identifier for Samizdat curation
+const CURATION_LIST_D_TAG = 'samizdat-editors-picks'
+
+// Fetch curation list (kind 30001) from any pubkey
+async function fetchCurationList(pool: SimplePool, relays: string[]): Promise<{ authors: string[]; curatorPubkey?: string; curatorName?: string } | null> {
+  // First, check if we have a saved curator pubkey
+  const savedCurator = localStorage.getItem('samizdat_curator_pubkey')
+
+  // Try to find any samizdat curation list
+  const filter: any = {
+    kinds: [30001],
+    '#d': [CURATION_LIST_D_TAG],
+    limit: 10,
+  }
+  if (savedCurator) {
+    filter.authors = [savedCurator]
+  }
+
+  const events = await pool.querySync(relays, filter)
+  if (events.length === 0) return null
+
+  // Pick the most recent one
+  const latest = events.sort((a, b) => b.created_at - a.created_at)[0]
+  const authors = latest.tags
+    .filter(t => t[0] === 'p')
+    .map(t => t[1])
+
+  return { authors, curatorPubkey: latest.pubkey }
+}
 
 interface PressArticle {
   id: string
@@ -77,15 +107,113 @@ export function Press() {
   const [trendingArticles, setTrendingArticles] = useState<PressArticle[]>([])
   const [exclusiveArticles, setExclusiveArticles] = useState<PressArticle[]>([])
   const [loading, setLoading] = useState(true)
+  const [curatorName, setCuratorName] = useState<string | null>(null)
+  const [showCurate, setShowCurate] = useState(false)
+  const [curateInput, setCurateInput] = useState('')
+  const [curateStatus, setCurateStatus] = useState('')
+  const [curatedPubkeys, setCuratedPubkeys] = useState<string[]>([])
+  const [curatedProfiles, setCuratedProfiles] = useState<Map<string, { name?: string; picture?: string }>>(new Map())
+
+  // Check if user is logged in (has NIP-07 extension)
+  const hasExtension = typeof window !== 'undefined' && !!window.nostr
+
+  // Add author to curation list
+  const handleAddAuthor = useCallback(async () => {
+    if (!curateInput.trim()) return
+    setCurateStatus('Looking up…')
+    try {
+      let hex = curateInput.trim()
+      // Try to decode npub
+      if (hex.startsWith('npub')) {
+        const decoded = nip19.decode(hex)
+        if (decoded.type === 'npub') hex = decoded.data as string
+      }
+      // Validate hex
+      if (!/^[0-9a-f]{64}$/.test(hex)) {
+        setCurateStatus('Invalid npub or hex pubkey')
+        return
+      }
+      if (curatedPubkeys.includes(hex)) {
+        setCurateStatus('Already in list')
+        return
+      }
+
+      const updated = [...curatedPubkeys, hex]
+      setCuratedPubkeys(updated)
+      setCurateInput('')
+      setCurateStatus('')
+
+      // Fetch profile for the new author
+      const profile = await fetchProfile(hex, DEFAULT_RELAYS)
+      if (profile) {
+        setCuratedProfiles(prev => new Map(prev).set(hex, profile))
+      }
+    } catch {
+      setCurateStatus('Failed to look up')
+    }
+  }, [curateInput, curatedPubkeys])
+
+  // Remove author from curation list
+  const handleRemoveAuthor = useCallback((hex: string) => {
+    setCuratedPubkeys(prev => prev.filter(p => p !== hex))
+  }, [])
+
+  // Publish curation list to nostr
+  const handlePublishList = useCallback(async () => {
+    if (!window.nostr || curatedPubkeys.length === 0) return
+    setCurateStatus('Signing…')
+    try {
+      const event = {
+        kind: 30001,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [
+          ['d', CURATION_LIST_D_TAG],
+          ['title', "Samizdat Editor's Picks"],
+          ['description', 'Curated long-form writers for the Samizdat press'],
+          ...curatedPubkeys.map(pk => ['p', pk]),
+        ],
+        content: '',
+      }
+      const signed = await window.nostr.signEvent(event)
+
+      const pool = new SimplePool()
+      const { publishToRelays } = await import('../lib/nostr')
+      const results = await publishToRelays(signed, DEFAULT_RELAYS)
+      pool.close(DEFAULT_RELAYS)
+
+      const ok = results.filter(r => r.ok).length
+      setCurateStatus(`Published to ${ok} relays ✓`)
+
+      // Save curator pubkey for future loads
+      const pubkey = await window.nostr.getPublicKey()
+      localStorage.setItem('samizdat_curator_pubkey', pubkey)
+
+      setTimeout(() => setCurateStatus(''), 3000)
+    } catch (e: any) {
+      setCurateStatus(e.message || 'Failed to publish')
+    }
+  }, [curatedPubkeys])
 
   useEffect(() => {
     async function loadArticles() {
       const pool = new SimplePool()
       try {
+        // Try to fetch curation list from nostr
+        const curation = await fetchCurationList(pool, DEFAULT_RELAYS)
+        const curatedAuthors = curation?.authors?.length ? curation.authors : FALLBACK_AUTHORS
+
+        // Set curated pubkeys for the editor UI
+        setCuratedPubkeys(curatedAuthors)
+
+        if (curation?.curatorPubkey) {
+          const profile = await fetchProfile(curation.curatorPubkey, DEFAULT_RELAYS).catch(() => null)
+          setCuratorName(profile?.name || null)
+        }
+
         const [curatedEvents, recentEvents] = await Promise.all([
           pool.querySync(DEFAULT_RELAYS, {
             kinds: [30023],
-            authors: CURATED_AUTHORS,
+            authors: curatedAuthors,
             limit: 20,
           }),
           pool.querySync(DEFAULT_RELAYS, {
@@ -224,7 +352,57 @@ export function Press() {
           {/* Editor's Picks */}
           {curatedArticles.length > 0 && (
             <section className="press-section">
-              <h2 className="press-section-label">Editor's Picks</h2>
+              <div className="press-section-header">
+                <h2 className="press-section-label">
+                  Editor's Picks
+                  {curatorName && <span className="press-curator-name">curated by {curatorName}</span>}
+                </h2>
+                {hasExtension && (
+                  <button
+                    className="press-curate-btn"
+                    onClick={() => setShowCurate(!showCurate)}
+                  >
+                    {showCurate ? 'Close' : '✎ Curate'}
+                  </button>
+                )}
+              </div>
+
+              {/* Curate panel */}
+              {showCurate && (
+                <div className="press-curate-panel">
+                  <p className="press-curate-desc">
+                    Add or remove authors. Changes are published as a NIP-51 list to your relays.
+                  </p>
+                  <div className="press-curate-authors">
+                    {curatedPubkeys.map(pk => (
+                      <div key={pk} className="press-curate-author">
+                        {curatedProfiles.get(pk)?.picture && (
+                          <img src={curatedProfiles.get(pk)!.picture} alt="" className="press-curate-avatar" />
+                        )}
+                        <span className="press-curate-author-name">
+                          {curatedProfiles.get(pk)?.name || pk.slice(0, 16) + '…'}
+                        </span>
+                        <button className="press-curate-remove" onClick={() => handleRemoveAuthor(pk)}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="press-curate-add">
+                    <input
+                      type="text"
+                      placeholder="npub1... or hex pubkey"
+                      value={curateInput}
+                      onChange={e => setCurateInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleAddAuthor()}
+                      className="press-curate-input"
+                    />
+                    <button className="press-curate-add-btn" onClick={handleAddAuthor}>Add</button>
+                  </div>
+                  {curateStatus && <span className="press-curate-status">{curateStatus}</span>}
+                  <button className="press-curate-publish" onClick={handlePublishList}>
+                    Sign & Publish List
+                  </button>
+                </div>
+              )}
               <div className="press-grid">
                 {curatedArticles.map(article => (
                   <ArticleCard key={article.id} article={article} />
