@@ -255,6 +255,21 @@
 
 .press-curate-remove:hover { color: #c0392b; }
 
+.press-curate-articles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.press-curate-articles-label {
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  color: #555;
+  width: 100%;
+}
+
 .press-curate-add {
   display: flex;
   gap: 0.4rem;

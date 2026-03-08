@@ -446,18 +446,58 @@ export function Press() {
     }
   }, [loggedInPubkey, bookmarkIds])
 
+  // Curated articles (by naddr)
+  const [curatedArticleAddrs, setCuratedArticleAddrs] = useState<{ kind: number; pubkey: string; identifier: string; naddr: string }[]>([])
+
   // === CURATION EDITOR ===
-  const handleAddAuthor = useCallback(async () => {
+  const handleAddCuration = useCallback(async () => {
     if (!curateInput.trim()) return
+    const input = curateInput.trim()
     setCurateStatus('Looking up…')
     try {
-      let hex = curateInput.trim()
+      // Try naddr (specific article)
+      if (input.startsWith('naddr')) {
+        const decoded = nip19.decode(input)
+        if (decoded.type === 'naddr') {
+          const data = decoded.data as { kind: number; pubkey: string; identifier: string; relays?: string[] }
+          // Check if already added
+          if (curatedArticleAddrs.some(a => a.pubkey === data.pubkey && a.identifier === data.identifier)) {
+            setCurateStatus('Article already in list')
+            return
+          }
+          setCuratedArticleAddrs(prev => [...prev, { ...data, naddr: input }])
+          // Also add author if not already there
+          if (!curatedPubkeys.includes(data.pubkey)) {
+            setCuratedPubkeys(prev => [...prev, data.pubkey])
+            const profile = await fetchProfile(data.pubkey, DEFAULT_RELAYS)
+            if (profile) setCuratedProfiles(prev => new Map(prev).set(data.pubkey, profile))
+          }
+          setCurateInput('')
+          setCurateStatus('Article added ✓')
+          setTimeout(() => setCurateStatus(''), 2000)
+          return
+        }
+      }
+
+      // Try samizdat.press/a/naddr... URL
+      if (input.includes('/a/naddr')) {
+        const naddrMatch = input.match(/naddr1[a-z0-9]+/)
+        if (naddrMatch) {
+          // Recurse with just the naddr
+          setCurateInput(naddrMatch[0])
+          setTimeout(() => handleAddCuration(), 50)
+          return
+        }
+      }
+
+      // Try npub (author)
+      let hex = input
       if (hex.startsWith('npub')) {
         const decoded = nip19.decode(hex)
         if (decoded.type === 'npub') hex = decoded.data as string
       }
       if (!/^[0-9a-f]{64}$/.test(hex)) {
-        setCurateStatus('Invalid npub or hex pubkey')
+        setCurateStatus('Paste npub, naddr, or article link')
         return
       }
       if (curatedPubkeys.includes(hex)) {
@@ -469,17 +509,25 @@ export function Press() {
       setCurateStatus('')
       const profile = await fetchProfile(hex, DEFAULT_RELAYS)
       if (profile) setCuratedProfiles(prev => new Map(prev).set(hex, profile))
-    } catch {
-      setCurateStatus('Failed to look up')
+    } catch (e: any) {
+      setCurateStatus('Invalid input — use npub, naddr, or article link')
     }
-  }, [curateInput, curatedPubkeys])
+  }, [curateInput, curatedPubkeys, curatedArticleAddrs])
 
   const handleRemoveAuthor = useCallback((hex: string) => {
     setCuratedPubkeys(prev => prev.filter(p => p !== hex))
   }, [])
 
+  const handleRemoveArticle = useCallback((naddr: string) => {
+    setCuratedArticleAddrs(prev => prev.filter(a => a.naddr !== naddr))
+  }, [])
+
   const handlePublishList = useCallback(async () => {
-    if (!window.nostr || curatedPubkeys.length === 0) return
+    if (!window.nostr) {
+      setCurateStatus('No nostr extension found — install Alby or nos2x')
+      return
+    }
+    if (curatedPubkeys.length === 0 && curatedArticleAddrs.length === 0) return
     setCurateStatus('Signing…')
     try {
       const event = {
@@ -490,18 +538,41 @@ export function Press() {
           ['title', "Samizdat Editor's Picks"],
           ['description', 'Curated long-form writers for the Samizdat press'],
           ...curatedPubkeys.map(pk => ['p', pk]),
+          ...curatedArticleAddrs.map(a => ['a', `30023:${a.pubkey}:${a.identifier}`]),
         ],
         content: '',
       }
       const signed = await window.nostr.signEvent(event)
-      const results = await publishToRelays(signed, DEFAULT_RELAYS)
-      const ok = results.filter(r => r.ok).length
-      setCurateStatus(`Published to ${ok} relays ✓`)
-      setTimeout(() => setCurateStatus(''), 3000)
+
+      // Publish with timeout per relay
+      const results = await Promise.allSettled(
+        DEFAULT_RELAYS.map(async url => {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 8000)
+          try {
+            const res = await publishToRelays(signed, [url])
+            clearTimeout(timeout)
+            return res[0]
+          } catch {
+            clearTimeout(timeout)
+            return { url, ok: false }
+          }
+        })
+      )
+      const ok = results.filter(r => r.status === 'fulfilled' && (r.value as any)?.ok).length
+      if (ok > 0) {
+        setCurateStatus(`Published to ${ok} relay${ok > 1 ? 's' : ''} ✓`)
+      } else {
+        setCurateStatus('Published (relays may be slow — list saved)')
+      }
+      // Clear cache so press reloads with new curation
+      sessionStorage.removeItem('samizdat_press_cache')
+      setTimeout(() => setCurateStatus(''), 4000)
     } catch (e: any) {
-      setCurateStatus(e.message || 'Failed to publish')
+      console.error('Publish failed:', e)
+      setCurateStatus(e.message || 'Failed to sign — check your extension')
     }
-  }, [curatedPubkeys])
+  }, [curatedPubkeys, curatedArticleAddrs])
 
   return (
     <div className="press">
@@ -591,16 +662,28 @@ export function Press() {
                         </div>
                       ))}
                     </div>
+                    {/* Pinned articles */}
+                    {curatedArticleAddrs.length > 0 && (
+                      <div className="press-curate-articles">
+                        <span className="press-curate-articles-label">Pinned articles:</span>
+                        {curatedArticleAddrs.map(a => (
+                          <div key={a.naddr} className="press-curate-author">
+                            <span className="press-curate-author-name">{a.identifier.replace(/-/g, ' ')}</span>
+                            <button className="press-curate-remove" onClick={() => handleRemoveArticle(a.naddr)}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="press-curate-add">
                       <input
                         type="text"
-                        placeholder="npub1... or hex pubkey"
+                        placeholder="npub, naddr, or article link"
                         value={curateInput}
                         onChange={e => setCurateInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleAddAuthor()}
+                        onKeyDown={e => e.key === 'Enter' && handleAddCuration()}
                         className="press-curate-input"
                       />
-                      <button className="press-curate-add-btn" onClick={handleAddAuthor}>Add</button>
+                      <button className="press-curate-add-btn" onClick={handleAddCuration}>Add</button>
                     </div>
                     {curateStatus && <span className="press-curate-status">{curateStatus}</span>}
                     <button className="press-curate-publish" onClick={handlePublishList}>
