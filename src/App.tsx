@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { TitleBar } from './components/TitleBar'
 import { ArticleReader } from './components/ArticleReader'
+import { Press } from './components/Press'
 import { Editor, type EditorRef } from './components/Editor'
 import { Sidebar } from './components/Sidebar'
 import { PublishModal } from './components/PublishModal'
@@ -222,6 +223,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/a/:naddr" element={<ArticleReader />} />
+        <Route path="/read" element={<Press />} />
         <Route path="*" element={editorView()} />
       </Routes>
     </BrowserRouter>

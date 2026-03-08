@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import './Landing.css'
 
 interface LandingProps {
@@ -20,9 +21,12 @@ export function Landing({ onGetStarted }: LandingProps) {
       {/* Nav */}
       <nav className="landing-nav">
         <span className="landing-wordmark">samizdat</span>
-        <button className="landing-cta-sm" onClick={onGetStarted}>
-          Start Writing
-        </button>
+        <div className="landing-nav-links">
+          <Link to="/read" className="landing-nav-link">Read the Press</Link>
+          <button className="landing-cta-sm" onClick={onGetStarted}>
+            Start Writing
+          </button>
+        </div>
       </nav>
 
       {/* Hero */}
