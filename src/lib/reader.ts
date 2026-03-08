@@ -72,6 +72,42 @@ export async function fetchArticleByNaddr(naddrStr: string): Promise<ArticleData
   }
 }
 
+export async function fetchArticleFromRelay(
+  pubkey: string,
+  slug: string,
+  relayUrl: string
+): Promise<ArticleData | null> {
+  const pool = new SimplePool()
+  try {
+    const event = await pool.get([relayUrl], {
+      kinds: [30023],
+      authors: [pubkey],
+      '#d': [slug],
+    })
+    if (!event) return null
+
+    const getTag = (name: string) => event.tags.find(t => t[0] === name)?.[1]
+    const getTags = (name: string) => event.tags.filter(t => t[0] === name).map(t => t[1])
+
+    return {
+      id: event.id,
+      pubkey: event.pubkey,
+      title: getTag('title') || 'Untitled',
+      content: event.content,
+      summary: getTag('summary'),
+      image: getTag('image'),
+      tags: getTags('t'),
+      publishedAt: getTag('published_at') ? parseInt(getTag('published_at')!) : undefined,
+      createdAt: event.created_at,
+      slug: getTag('d') || '',
+      zapGate: getTag('zap_gate') ? parseInt(getTag('zap_gate')!) : undefined,
+      previewEnd: getTag('preview_end') ? parseInt(getTag('preview_end')!) : undefined,
+    }
+  } finally {
+    pool.close([relayUrl])
+  }
+}
+
 export async function fetchComments(articleEventId: string, relays: string[]): Promise<CommentData[]> {
   const pool = new SimplePool()
 

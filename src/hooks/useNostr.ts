@@ -322,10 +322,52 @@ export function useNostr(): [NostrState, NostrActions] {
 
       const event = buildArticleEvent(article)
 
-      // Add zap gate tags if enabled
+      // Zap-gated: split publish (preview to public, full to private relay)
       if (options.zapGate) {
         event.tags.push(['zap_gate', String(options.zapGate.amount)])
         event.tags.push(['preview_end', String(options.zapGate.previewEnd)])
+
+        // Build preview-only version for public relays
+        const paragraphs = markdown.split(/\n\n+/)
+        const previewMd = paragraphs.slice(0, options.zapGate.previewEnd).join('\n\n')
+        const previewArticle: Article = {
+          ...article,
+          content: previewMd + '\n\n---\n\n*This article is zap-gated. Read the full version on [Samizdat](https://samizdat.press).*',
+        }
+        const previewEvent = buildArticleEvent(previewArticle)
+        previewEvent.tags.push(['zap_gate', String(options.zapGate.amount)])
+        previewEvent.tags.push(['preview_end', String(options.zapGate.previewEnd)])
+
+        // Sign both events
+        const signedPreview = await signEvent(previewEvent)
+        const signedFull = await signEvent(event)
+
+        // Publish preview to public relays
+        const writeRelays = relays.filter(r => r.write).map(r => r.url)
+        const publicRelays = writeRelays.length > 0 ? writeRelays : DEFAULT_RELAYS
+        const publicResults = await publishToRelays(signedPreview, publicRelays)
+
+        // Publish full to private Samizdat relay
+        const SAMIZDAT_RELAY = 'wss://relay.samizdat.press'
+        const privateResults = await publishToRelays(signedFull, [SAMIZDAT_RELAY]).catch(() => [{ url: SAMIZDAT_RELAY, ok: false, error: 'Private relay unavailable' }])
+
+        const successful = [...publicResults, ...privateResults].filter(r => r.ok)
+
+        if (successful.length > 0) {
+          setPublishResult({
+            success: true,
+            message: `Preview → ${publicResults.filter(r => r.ok).length} public relays, Full → ${privateResults.filter((r: any) => r.ok).length > 0 ? 'private relay' : 'pending (relay not yet configured)'}`,
+            relays: successful.map(r => r.url),
+          })
+        } else {
+          setPublishResult({
+            success: false,
+            message: 'Failed to publish to any relay.',
+          })
+        }
+
+        setIsPublishing(false)
+        return
       }
 
       const signed = await signEvent(event)

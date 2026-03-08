@@ -149,12 +149,39 @@ export function ArticleReader() {
     bodyHtml = markdownToHtml(article.content)
   }
 
-  const handleUnlock = () => {
-    // MVP: just mark as unlocked in localStorage
-    // Future: verify zap receipt on-chain
-    const zapKey = `samizdat_zapped_${article.id}`
-    localStorage.setItem(zapKey, '1')
-    window.location.reload()
+  const [unlocking, setUnlocking] = useState(false)
+
+  const handleUnlock = async () => {
+    if (!article) return
+    setUnlocking(true)
+    try {
+      // Try to fetch the full article from the Samizdat private relay
+      const { fetchArticleFromRelay } = await import('../lib/reader')
+      const fullArticle = await fetchArticleFromRelay(
+        article.pubkey,
+        article.slug,
+        'wss://relay.samizdat.press'
+      )
+
+      if (fullArticle && fullArticle.content.length > article.content.length) {
+        // Got the full content — save unlock state and reload with full content
+        const zapKey = `samizdat_zapped_${article.id}`
+        localStorage.setItem(zapKey, '1')
+        setArticle(fullArticle)
+      } else {
+        // Fallback: honor system unlock
+        const zapKey = `samizdat_zapped_${article.id}`
+        localStorage.setItem(zapKey, '1')
+        window.location.reload()
+      }
+    } catch (e) {
+      // Relay not available yet — honor system fallback
+      const zapKey = `samizdat_zapped_${article.id}`
+      localStorage.setItem(zapKey, '1')
+      window.location.reload()
+    } finally {
+      setUnlocking(false)
+    }
   }
 
   return (
@@ -225,8 +252,8 @@ export function ArticleReader() {
                 </p>
               )}
               <div className="paywall-actions">
-                <button className="paywall-unlock" onClick={handleUnlock}>
-                  I've zapped — unlock article
+                <button className="paywall-unlock" onClick={handleUnlock} disabled={unlocking}>
+                  {unlocking ? 'Checking…' : "I've zapped — unlock article"}
                 </button>
               </div>
               <p className="paywall-note">
