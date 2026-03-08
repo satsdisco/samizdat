@@ -25,7 +25,7 @@ export interface CommentData {
   pubkey: string
   content: string
   createdAt: number
-  author?: { name?: string; picture?: string; nip05?: string } | null
+  author?: { name?: string; picture?: string; nip05?: string; lud16?: string } | null
 }
 
 export async function fetchArticleByNaddr(naddrStr: string): Promise<ArticleData | null> {
@@ -123,7 +123,7 @@ export async function fetchComments(articleEventId: string, relays: string[]): P
 
     // Fetch author profiles for all unique pubkeys
     const pubkeys = [...new Set(events.map(e => e.pubkey))]
-    const profiles = new Map<string, { name?: string; picture?: string; nip05?: string } | null>()
+    const profiles = new Map<string, { name?: string; picture?: string; nip05?: string; lud16?: string } | null>()
 
     await Promise.all(
       pubkeys.map(async (pk) => {

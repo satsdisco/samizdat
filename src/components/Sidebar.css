@@ -249,3 +249,11 @@
   font-size: 0.7rem;
   color: var(--text-faint);
 }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .sidebar {
+    width: 100%;
+    max-width: 100%;
+  }
+}

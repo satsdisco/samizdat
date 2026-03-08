@@ -25,7 +25,7 @@ function formatDate(ts: number): string {
 export function ArticleReader() {
   const { naddr } = useParams<{ naddr: string }>()
   const [article, setArticle] = useState<ArticleData | null>(null)
-  const [author, setAuthor] = useState<{ name?: string; picture?: string; nip05?: string } | null>(null)
+  const [author, setAuthor] = useState<{ name?: string; picture?: string; nip05?: string; lud16?: string } | null>(null)
   const [comments, setComments] = useState<CommentData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -263,20 +263,42 @@ export function ArticleReader() {
           </div>
         )}
 
+        {/* Zap / Share Bar */}
+        <div className="reader-actions">
+          {author?.lud16 && (
+            <a
+              href={`lightning:${author.lud16}`}
+              className="reader-zap-btn"
+              title={`Zap ${author.name || 'author'}`}
+            >
+              ⚡ Zap
+            </a>
+          )}
+          <button
+            className="reader-share-btn"
+            onClick={() => {
+              const url = `https://samizdat.press/a/${naddr}`
+              navigator.clipboard.writeText(url)
+              alert('Link copied!')
+            }}
+          >
+            🔗 Share
+          </button>
+          <a
+            href={`https://njump.me/${naddr}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="reader-njump-btn"
+          >
+            ↗ View on nostr
+          </a>
+        </div>
+
         {/* Footer */}
         <footer className="reader-footer">
           <div className="reader-footer-divider" />
           <div className="reader-footer-meta">
             Published via <a href="/" className="reader-samizdat-link">Samizdat</a>
-            {' · '}
-            <a
-              href={`https://njump.me/${naddr}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="reader-nostr-link"
-            >
-              View on nostr ↗
-            </a>
           </div>
         </footer>
       </article>

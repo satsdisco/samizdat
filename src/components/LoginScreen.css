@@ -372,3 +372,25 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .login-screen {
+    padding: 1rem;
+  }
+
+  .login-card {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+
+  .login-title {
+    font-size: 1.2rem;
+  }
+
+  .qr-container canvas,
+  .qr-container svg {
+    max-width: 200px !important;
+    max-height: 200px !important;
+  }
+}

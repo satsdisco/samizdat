@@ -36,17 +36,31 @@ function App() {
     const text = html.replace(/<[^>]*>/g, ' ').trim()
     const words = text ? text.split(/\s+/).filter(w => w.length > 0).length : 0
     setWordCount(words)
+    // Auto-save to localStorage
+    localStorage.setItem('samizdat_draft_content', html)
   }, [])
 
-  // Auto-save title to localStorage
+  // Restore saved draft from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('samizdat_draft_title')
-    if (saved) setTitle(saved)
+    const savedTitle = localStorage.getItem('samizdat_draft_title')
+    if (savedTitle) setTitle(savedTitle)
+    const savedContent = localStorage.getItem('samizdat_draft_content')
+    const savedBanner = localStorage.getItem('samizdat_draft_banner')
+    if (savedContent) {
+      // Small delay to let editor mount first
+      setTimeout(() => editorRef.current?.setContent(savedContent), 100)
+    }
+    if (savedBanner) setBannerImage(savedBanner)
   }, [])
 
   useEffect(() => {
     if (title) localStorage.setItem('samizdat_draft_title', title)
   }, [title])
+
+  useEffect(() => {
+    if (bannerImage) localStorage.setItem('samizdat_draft_banner', bannerImage)
+    else localStorage.removeItem('samizdat_draft_banner')
+  }, [bannerImage])
 
   // Load articles when connected
   useEffect(() => {
@@ -95,6 +109,8 @@ function App() {
     editorRef.current?.clear()
     setShowSidebar(false)
     localStorage.removeItem('samizdat_draft_title')
+    localStorage.removeItem('samizdat_draft_content')
+    localStorage.removeItem('samizdat_draft_banner')
   }, [])
 
   // Dismiss publish result
@@ -195,6 +211,7 @@ function App() {
           message={nostr.publishResult.message}
           type={nostr.publishResult.success ? 'success' : 'error'}
           onClose={actions.clearPublishResult}
+          naddr={nostr.publishResult.naddr}
         />
       )}
     </div>

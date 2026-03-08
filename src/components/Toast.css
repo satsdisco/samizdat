@@ -4,8 +4,8 @@
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
+  flex-direction: column;
+  gap: 0.4rem;
   padding: 0.7rem 1.2rem;
   border-radius: 6px;
   font-family: var(--font-ui);
@@ -13,6 +13,17 @@
   z-index: 200;
   animation: toast-in 0.3s ease;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  max-width: 420px;
+}
+
+.toast-main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.toast-with-link {
+  padding-bottom: 0.5rem;
 }
 
 .toast-success {
@@ -29,6 +40,10 @@
   font-weight: 700;
 }
 
+.toast-message {
+  flex: 1;
+}
+
 .toast-close {
   background: none;
   border: none;
@@ -41,6 +56,41 @@
 
 .toast-close:hover {
   color: white;
+}
+
+.toast-link-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-left: 1.5rem;
+}
+
+.toast-reader-link {
+  color: white;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.toast-reader-link:hover {
+  opacity: 0.9;
+}
+
+.toast-copy {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 3px;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.toast-copy:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 @keyframes toast-in {

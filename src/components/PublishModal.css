@@ -367,3 +367,20 @@
   border: 2px solid white;
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .modal {
+    width: 95%;
+    max-height: 90vh;
+    margin: 1rem;
+  }
+
+  .zap-amount-row {
+    flex-wrap: wrap;
+  }
+
+  .zap-gate-options {
+    padding-left: 0.5rem;
+  }
+}

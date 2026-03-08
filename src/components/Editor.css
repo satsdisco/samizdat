@@ -279,3 +279,30 @@
 .samizdat-editor em {
   font-style: italic;
 }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .editor-wrapper {
+    padding: 0 1rem;
+  }
+
+  .title-input {
+    font-size: 1.5rem;
+    padding: 0.8rem 0;
+  }
+
+  .samizdat-editor {
+    font-size: 1rem;
+    padding: 0;
+  }
+
+  .banner-area {
+    margin: 0 -1rem;
+    border-radius: 0;
+  }
+
+  .image-toolbar {
+    bottom: 0.5rem;
+    right: 0.5rem;
+  }
+}

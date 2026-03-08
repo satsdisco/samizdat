@@ -70,3 +70,15 @@ body {
   background: var(--border);
   border-radius: 3px;
 }
+
+/* Mobile */
+@media (max-width: 640px) {
+  html {
+    font-size: 16px;
+  }
+
+  :root {
+    --gutter: 1rem;
+    --content-width: 100%;
+  }
+}

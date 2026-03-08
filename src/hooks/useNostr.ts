@@ -39,7 +39,7 @@ interface NostrState {
 
   // Publishing
   isPublishing: boolean
-  publishResult: { success: boolean; message: string; relays?: string[] } | null
+  publishResult: { success: boolean; message: string; relays?: string[]; naddr?: string } | null
 }
 
 interface NostrActions {
@@ -354,10 +354,18 @@ export function useNostr(): [NostrState, NostrActions] {
         const successful = [...publicResults, ...privateResults].filter(r => r.ok)
 
         if (successful.length > 0) {
+          const { nip19 } = await import('nostr-tools')
+          const naddr = nip19.naddrEncode({
+            kind: 30023,
+            pubkey: pubkey!,
+            identifier: slug,
+            relays: publicRelays.slice(0, 2),
+          })
           setPublishResult({
             success: true,
             message: `Preview → ${publicResults.filter(r => r.ok).length} public relays, Full → ${privateResults.filter((r: any) => r.ok).length > 0 ? 'private relay' : 'pending (relay not yet configured)'}`,
             relays: successful.map(r => r.url),
+            naddr,
           })
         } else {
           setPublishResult({
@@ -379,9 +387,17 @@ export function useNostr(): [NostrState, NostrActions] {
       const successful = results.filter(r => r.ok)
 
       if (successful.length > 0) {
+        const { nip19 } = await import('nostr-tools')
+        const naddr = options.isDraft ? undefined : nip19.naddrEncode({
+          kind: 30023,
+          pubkey: pubkey!,
+          identifier: slug,
+          relays: targetRelays.slice(0, 2),
+        })
         setPublishResult({
           success: true,
           message: `Published to ${successful.length}/${results.length} relays`,
+          naddr,
           relays: successful.map(r => r.url),
         })
       } else {

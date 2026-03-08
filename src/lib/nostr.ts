@@ -124,7 +124,7 @@ export async function fetchRelayList(pubkey: string, relayUrls: string[]): Promi
 }
 
 // Fetch user profile metadata (kind:0)
-export async function fetchProfile(pubkey: string, relayUrls: string[]): Promise<{ name?: string; picture?: string; nip05?: string } | null> {
+export async function fetchProfile(pubkey: string, relayUrls: string[]): Promise<{ name?: string; picture?: string; nip05?: string; lud16?: string } | null> {
   for (const url of relayUrls) {
     let relay: Relay | null = null
     try {
