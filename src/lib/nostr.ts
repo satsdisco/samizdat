@@ -1,6 +1,7 @@
 // Nostr protocol utilities using nostr-tools
 
 import { Relay } from 'nostr-tools/relay'
+import { SimplePool } from 'nostr-tools'
 import { nip19 } from 'nostr-tools'
 import type { Article, NostrEvent, RelayInfo } from '../types/nostr'
 
@@ -166,28 +167,30 @@ export async function fetchProfile(pubkey: string, relayUrls: string[]): Promise
 
 // Publish a signed event to multiple relays
 export async function publishToRelays(event: NostrEvent, relayUrls: string[]): Promise<{ url: string; ok: boolean; error?: string }[]> {
-  const results: { url: string; ok: boolean; error?: string }[] = []
+  const pool = new SimplePool()
 
   const promises = relayUrls.map(async (url) => {
-    let relay: Relay | null = null
     try {
-      relay = await Relay.connect(url)
-      await relay.publish(event as any)
-      relay.close()
+      // Race between publish and timeout
+      await Promise.race([
+        pool.publish([url], event as any),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+      ])
       return { url, ok: true }
     } catch (e: any) {
-      relay?.close()
       return { url, ok: false, error: e.message || 'Failed' }
     }
   })
 
   const settled = await Promise.allSettled(promises)
+  const results: { url: string; ok: boolean; error?: string }[] = []
   for (const result of settled) {
     if (result.status === 'fulfilled') {
       results.push(result.value)
     }
   }
 
+  pool.close(relayUrls)
   return results
 }
 

@@ -598,27 +598,14 @@ export function Press() {
         content: '',
       }
       const signed = await signEvent(event)
+      setCurateStatus('Publishing…')
 
-      // Publish with timeout per relay
-      const results = await Promise.allSettled(
-        getPressRelays().map(async url => {
-          const controller = new AbortController()
-          const timeout = setTimeout(() => controller.abort(), 8000)
-          try {
-            const res = await publishToRelays(signed, [url])
-            clearTimeout(timeout)
-            return res[0]
-          } catch {
-            clearTimeout(timeout)
-            return { url, ok: false }
-          }
-        })
-      )
-      const ok = results.filter(r => r.status === 'fulfilled' && (r.value as any)?.ok).length
+      const results = await publishToRelays(signed, getPressRelays())
+      const ok = results.filter(r => r.ok).length
       if (ok > 0) {
         setCurateStatus(`Published to ${ok} relay${ok > 1 ? 's' : ''} ✓`)
       } else {
-        setCurateStatus('Published (relays may be slow — list saved)')
+        setCurateStatus('Signed ✓ — relays are slow, try refreshing in a minute')
       }
       // Clear cache so press reloads with new curation
       sessionStorage.removeItem('samizdat_press_cache')
