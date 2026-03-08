@@ -350,19 +350,7 @@
   filter: grayscale(20%);
 }
 
-/* Text-only cards — no image, subtle left accent */
-.press-card-no-image {
-  border-left: 2px solid #222 !important;
-  padding-left: 0.9rem !important;
-}
 
-.press-card-no-image .press-card-title {
-  font-size: 0.95rem;
-}
-
-.press-card-no-image .press-card-summary {
-  -webkit-line-clamp: 3;
-}
 
 .press-card-text {
   flex: 1;

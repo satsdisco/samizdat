@@ -101,12 +101,10 @@ function formatDate(ts: number): string {
 function ArticleCard({ article, onBookmark }: { article: PressArticle; onBookmark?: (id: string) => void }) {
   return (
     <div className="press-card-wrap">
-      <Link to={`/a/${article.naddr}`} className={`press-card ${!article.image ? 'press-card-no-image' : ''}`}>
-        {article.image && (
-          <div className="press-card-thumb">
-            <img src={article.image} alt="" loading="lazy" />
-          </div>
-        )}
+      <Link to={`/a/${article.naddr}`} className="press-card">
+        <div className="press-card-thumb">
+          <img src={article.image || '/placeholder.svg'} alt="" loading="lazy" />
+        </div>
         <div className="press-card-text">
           <h3 className="press-card-title">{article.title}</h3>
           {article.summary && (
