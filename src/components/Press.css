@@ -350,6 +350,21 @@
   filter: grayscale(20%);
 }
 
+.press-card-thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.press-card-initial {
+  font-family: 'Source Serif 4', serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.2);
+  line-height: 1;
+  user-select: none;
+}
+
 .press-card-text {
   flex: 1;
   min-width: 0;
