@@ -18,6 +18,8 @@ interface TitleBarProps {
   relayCount: number
   relays: RelayInfo[]
   onRelayToggle: (url: string, field: 'read' | 'write') => void
+  onRelayAdd: (url: string) => void
+  onRelayRemove: (url: string) => void
   onToggleSidebar: () => void
 }
 
@@ -36,9 +38,12 @@ export function TitleBar({
   isLoggingIn,
   relays,
   onRelayToggle,
+  onRelayAdd,
+  onRelayRemove,
   onToggleSidebar,
 }: TitleBarProps) {
   const [showRelays, setShowRelays] = useState(false)
+  const [newRelayUrl, setNewRelayUrl] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown on outside click
@@ -94,8 +99,14 @@ export function TitleBar({
               {showRelays && (
                 <div className="relay-dropdown">
                   <div className="relay-dropdown-header">
-                    <span>Relays</span>
-                    <span className="relay-dropdown-sub">{writeRelays.length} write · {readRelays.length} read</span>
+                    <div className="relay-dropdown-title">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                      </svg>
+                      Relays
+                    </div>
+                    <span className="relay-dropdown-sub">{writeRelays.length}W · {readRelays.length}R</span>
                   </div>
                   <div className="relay-dropdown-list">
                     {relays.map(relay => {
@@ -103,20 +114,27 @@ export function TitleBar({
                       return (
                         <div key={relay.url} className="relay-row">
                           <span className="relay-host" title={relay.url}>{host}</span>
-                          <div className="relay-toggles">
+                          <div className="relay-actions">
                             <button
-                              className={`relay-toggle ${relay.read ? 'active' : ''}`}
+                              className={`relay-pill ${relay.read ? 'on' : 'off'}`}
                               onClick={() => onRelayToggle(relay.url, 'read')}
-                              title="Read from this relay"
+                              title={relay.read ? 'Disable read' : 'Enable read'}
                             >
-                              R
+                              read
                             </button>
                             <button
-                              className={`relay-toggle ${relay.write ? 'active' : ''}`}
+                              className={`relay-pill ${relay.write ? 'on' : 'off'}`}
                               onClick={() => onRelayToggle(relay.url, 'write')}
-                              title="Write to this relay"
+                              title={relay.write ? 'Disable write' : 'Enable write'}
                             >
-                              W
+                              write
+                            </button>
+                            <button
+                              className="relay-remove"
+                              onClick={() => onRelayRemove(relay.url)}
+                              title="Remove relay"
+                            >
+                              ×
                             </button>
                           </div>
                         </div>
@@ -126,6 +144,30 @@ export function TitleBar({
                   {relays.length === 0 && (
                     <div className="relay-empty">No relays found. Using defaults.</div>
                   )}
+                  <form
+                    className="relay-add-form"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      const url = newRelayUrl.trim()
+                      if (!url) return
+                      const full = url.startsWith('wss://') || url.startsWith('ws://') ? url : `wss://${url}`
+                      if (!relays.some(r => r.url === full)) {
+                        onRelayAdd(full)
+                      }
+                      setNewRelayUrl('')
+                    }}
+                  >
+                    <input
+                      type="text"
+                      className="relay-add-input"
+                      placeholder="wss://relay.example.com"
+                      value={newRelayUrl}
+                      onChange={(e) => setNewRelayUrl(e.target.value)}
+                    />
+                    <button type="submit" className="relay-add-btn" disabled={!newRelayUrl.trim()}>
+                      Add
+                    </button>
+                  </form>
                 </div>
               )}
             </div>

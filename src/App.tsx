@@ -137,6 +137,8 @@ function App() {
         relayCount={nostr.relays.length}
         relays={nostr.relays}
         onRelayToggle={actions.toggleRelay}
+        onRelayAdd={actions.addRelay}
+        onRelayRemove={actions.removeRelay}
         onToggleSidebar={() => setShowSidebar(!showSidebar)}
       />
 
