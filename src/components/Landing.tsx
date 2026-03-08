@@ -75,6 +75,13 @@ export function Landing({ onGetStarted }: LandingProps) {
         </div>
       </section>
 
+      {/* Hero Image */}
+      <section className="hero-image-section">
+        <div className="hero-image-wrapper">
+          <img src="/hero.png" alt="A figure holding a pen like a sword, breaking free from chains — Soviet constructivist style" />
+        </div>
+      </section>
+
       {/* Editor Preview */}
       <section className="preview-section">
         <div className="preview-window">
