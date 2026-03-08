@@ -81,9 +81,7 @@
 /* Featured article */
 .press-featured {
   display: block;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0;
   text-decoration: none;
   color: inherit;
   transition: opacity 0.2s;
@@ -140,9 +138,7 @@
 
 /* Article list */
 .press-list {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0;
 }
 
 .press-item {
@@ -225,6 +221,39 @@
   color: #f7931a;
   font-family: var(--font-ui);
   font-weight: 600;
+}
+
+/* Sections */
+.press-section {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.press-section + .press-section {
+  margin-top: 2rem;
+}
+
+.press-section-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #888;
+  margin: 0;
+}
+
+.press-section-rule {
+  height: 1px;
+  background: #222;
+  margin: 0.5rem 0 1rem;
+}
+
+.press-reactions {
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  color: #e74c3c;
 }
 
 /* Empty state */
