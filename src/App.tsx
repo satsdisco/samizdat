@@ -6,6 +6,7 @@ import { PublishModal } from './components/PublishModal'
 import { Toast } from './components/Toast'
 import { Preview } from './components/Preview'
 import { LoginScreen } from './components/LoginScreen'
+import { Landing } from './components/Landing'
 import { useNostr } from './hooks/useNostr'
 import type { Article } from './types/nostr'
 import './styles/theme.css'
@@ -13,6 +14,7 @@ import './styles/theme.css'
 function App() {
   const [nostr, actions] = useNostr()
   const editorRef = useRef<EditorRef>(null)
+  const [showLogin, setShowLogin] = useState(false)
 
   // Editor state
   const [title, setTitle] = useState('')
@@ -99,19 +101,22 @@ function App() {
     }
   }, [nostr.publishResult])
 
-  // Show login screen if not authenticated
+  // Show landing page or login screen if not authenticated
   if (!nostr.pubkey) {
-    return (
-      <LoginScreen
-        onExtensionLogin={actions.loginWithExtension}
-        onBunkerLogin={actions.loginWithBunker}
-        onNsecLogin={actions.loginWithNsec}
-        onQrLogin={actions.initiateQrLogin}
-        isLoggingIn={nostr.isLoggingIn}
-        loginError={nostr.loginError}
-        hasExtension={typeof window !== 'undefined' && !!window.nostr}
-      />
-    )
+    if (showLogin) {
+      return (
+        <LoginScreen
+          onExtensionLogin={actions.loginWithExtension}
+          onBunkerLogin={actions.loginWithBunker}
+          onNsecLogin={actions.loginWithNsec}
+          onQrLogin={actions.initiateQrLogin}
+          isLoggingIn={nostr.isLoggingIn}
+          loginError={nostr.loginError}
+          hasExtension={typeof window !== 'undefined' && !!window.nostr}
+        />
+      )
+    }
+    return <Landing onGetStarted={() => setShowLogin(true)} />
   }
 
   return (
