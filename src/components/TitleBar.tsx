@@ -234,7 +234,7 @@ export function TitleBar({
                   <div className="user-menu-divider" />
                   <a
                     className="user-menu-item"
-                    href={`https://njump.me/${npubShort}`}
+                    href={`https://njump.me/${npub}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setShowUserMenu(false)}
