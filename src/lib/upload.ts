@@ -26,6 +26,7 @@ async function buildNip98Auth(url: string, method: string, signEvent: SignEventF
     tags: [
       ['u', url],
       ['method', method.toUpperCase()],
+      ['payload', ''],  // empty payload hash for file uploads
     ],
     content: '',
   }
@@ -51,11 +52,8 @@ async function buildNip98Auth(url: string, method: string, signEvent: SignEventF
     sig: signed.sig,
   }
 
-  // Use TextEncoder for safe base64 encoding (handles all characters)
-  const jsonStr = JSON.stringify(authEvent)
-  const bytes = new TextEncoder().encode(jsonStr)
-  const base64 = btoa(String.fromCharCode(...bytes))
-  return base64
+  // btoa works fine for ASCII JSON (hex strings + numbers)
+  return btoa(JSON.stringify(authEvent))
 }
 
 export async function uploadImage(file: File, signEvent?: SignEventFn): Promise<UploadResult> {
