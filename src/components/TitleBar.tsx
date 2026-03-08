@@ -10,6 +10,7 @@ interface TitleBarProps {
   isConnected: boolean
   isPublishing: boolean
   pubkey: string | null
+  npub: string | null
   npubShort: string | null
   profile: { name?: string; picture?: string; nip05?: string } | null
   onLogin: () => void
@@ -31,6 +32,7 @@ export function TitleBar({
   isConnected,
   isPublishing,
   pubkey,
+  npub,
   npubShort,
   profile,
   onLogin,
@@ -43,20 +45,25 @@ export function TitleBar({
   onToggleSidebar,
 }: TitleBarProps) {
   const [showRelays, setShowRelays] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const [newRelayUrl, setNewRelayUrl] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
-    if (!showRelays) return
+    if (!showRelays && !showUserMenu) return
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (showRelays && dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowRelays(false)
+      }
+      if (showUserMenu && userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false)
       }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [showRelays])
+  }, [showRelays, showUserMenu])
 
   const writeRelays = relays.filter(r => r.write)
   const readRelays = relays.filter(r => r.read)
@@ -201,13 +208,74 @@ export function TitleBar({
               {isPublishing ? 'Publishing…' : 'Publish'}
             </button>
 
-            <button className="user-btn" onClick={onLogout} title={`Signed in as ${profile?.name || npubShort}`}>
-              {profile?.picture ? (
-                <img src={profile.picture} alt="" className="user-avatar" />
-              ) : (
-                <span className="user-initial">{(profile?.name || '?')[0]}</span>
+            <div className="user-menu-wrapper" ref={userMenuRef}>
+              <button className="user-btn" onClick={() => setShowUserMenu(!showUserMenu)}>
+                {profile?.picture ? (
+                  <img src={profile.picture} alt="" className="user-avatar" />
+                ) : (
+                  <span className="user-initial">{(profile?.name || '?')[0]}</span>
+                )}
+              </button>
+
+              {showUserMenu && (
+                <div className="user-menu">
+                  <div className="user-menu-header">
+                    {profile?.picture && (
+                      <img src={profile.picture} alt="" className="user-menu-avatar" />
+                    )}
+                    <div className="user-menu-info">
+                      <span className="user-menu-name">{profile?.name || 'Anonymous'}</span>
+                      {profile?.nip05 && (
+                        <span className="user-menu-nip05">{profile.nip05}</span>
+                      )}
+                      <span className="user-menu-npub">{npubShort}</span>
+                    </div>
+                  </div>
+                  <div className="user-menu-divider" />
+                  <a
+                    className="user-menu-item"
+                    href={`https://njump.me/${npubShort}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    View profile
+                  </a>
+                  <button
+                    className="user-menu-item"
+                    onClick={() => {
+                      navigator.clipboard.writeText(npub || '')
+                      setShowUserMenu(false)
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Copy npub
+                  </button>
+                  <div className="user-menu-divider" />
+                  <button
+                    className="user-menu-item logout"
+                    onClick={() => {
+                      setShowUserMenu(false)
+                      onLogout()
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    Sign out
+                  </button>
+                </div>
               )}
-            </button>
+            </div>
           </>
         ) : (
           <button className="login-btn" onClick={onLogin} disabled={isLoggingIn}>

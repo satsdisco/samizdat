@@ -129,6 +129,7 @@ function App() {
         isConnected={nostr.isConnected}
         isPublishing={nostr.isPublishing}
         pubkey={nostr.pubkey}
+        npub={nostr.npub}
         npubShort={nostr.npubShort}
         profile={nostr.profile}
         onLogin={actions.loginWithExtension}
