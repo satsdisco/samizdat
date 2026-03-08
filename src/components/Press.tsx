@@ -216,9 +216,10 @@ export function Press() {
         const ep = await fetchProfile(EDITOR_PUBKEY, DEFAULT_RELAYS).catch(() => null)
         setEditorProfile(ep)
 
+        const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60
         const [curatedEvents, recentEvents] = await Promise.all([
           pool.querySync(DEFAULT_RELAYS, { kinds: [30023], authors, limit: 20 }),
-          pool.querySync(DEFAULT_RELAYS, { kinds: [30023], limit: 60 }),
+          pool.querySync(DEFAULT_RELAYS, { kinds: [30023], limit: 80, since: thirtyDaysAgo }),
         ])
 
         const allArticles = processEvents(curatedEvents, recentEvents, authors)
