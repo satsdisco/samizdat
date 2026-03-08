@@ -32,12 +32,40 @@
   gap: 1.5rem;
 }
 
-.press-subtitle {
+/* Tabs */
+.press-tabs {
+  display: flex;
+  gap: 0;
+  border: 1px solid #222;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.press-tab {
   font-family: var(--font-ui);
   font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: #555;
+  padding: 0.3rem 0.7rem;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #222;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.press-tab:last-child {
+  border-right: none;
+}
+
+.press-tab:hover {
+  color: #aaa;
+  background: #111;
+}
+
+.press-tab.active {
+  color: #e8e6e1;
+  background: #1a1a1a;
 }
 
 .press-write-link {
@@ -440,6 +468,89 @@
 
 .press-promo-cta:hover { opacity: 0.8; }
 
+/* Article card wrapper (for bookmark button) */
+.press-card-wrap {
+  position: relative;
+}
+
+.press-card-bookmark {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.4rem;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  color: #444;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  padding: 0.15rem;
+  line-height: 1;
+}
+
+.press-card-wrap:hover .press-card-bookmark {
+  opacity: 1;
+}
+
+.press-card-bookmark:hover {
+  color: #f7931a;
+}
+
+.press-card-bookmark.bookmarked {
+  opacity: 1;
+  color: #f7931a;
+}
+
+/* Empty states */
+.press-empty-state {
+  max-width: 400px;
+  margin: 3rem auto;
+  text-align: center;
+  padding: 2rem;
+}
+
+.press-empty-title {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ccc;
+  margin: 0 0 0.5rem;
+}
+
+.press-empty-desc {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: #666;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Login prompt */
+.press-login-prompt {
+  max-width: 900px;
+  margin: 1rem auto 0;
+  padding: 0 2rem;
+  text-align: center;
+}
+
+.press-login-prompt p {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  color: #555;
+  padding: 0.8rem 1.2rem;
+  border: 1px dashed #222;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.press-login-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.press-login-link:hover { opacity: 0.8; }
+
 /* Empty */
 .press-empty {
   text-align: center;
@@ -523,5 +634,14 @@
 
   .press-write-link {
     display: none;
+  }
+
+  .press-tab {
+    font-size: 0.6rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .press-login-prompt {
+    padding: 0 1rem;
   }
 }
