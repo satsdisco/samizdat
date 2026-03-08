@@ -62,6 +62,7 @@ interface NostrActions {
   toggleRelay: (url: string, field: 'read' | 'write') => void
   addRelay: (url: string) => void
   removeRelay: (url: string) => void
+  deleteArticle: (article: Article) => Promise<void>
 }
 
 const STORAGE_KEY = 'samizdat_pubkey'
@@ -388,6 +389,41 @@ export function useNostr(): [NostrState, NostrActions] {
     setRelays(prev => prev.filter(r => r.url !== url))
   }, [])
 
+  // Delete an article (NIP-09 deletion event)
+  const deleteArticle = useCallback(async (article: Article) => {
+    if (!pubkey) return
+
+    try {
+      // Build kind 5 deletion event referencing the article's 'a' tag
+      const kind = article.isDraft ? 30024 : 30023
+      const event = {
+        kind: 5,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [
+          ['a', `${kind}:${pubkey}:${article.slug}`],
+        ],
+        content: 'Article deleted via Samizdat',
+      }
+
+      const signed = await signEvent(event)
+
+      const writeRelays = relays.filter(r => r.write).map(r => r.url)
+      const targetRelays = writeRelays.length > 0 ? writeRelays : DEFAULT_RELAYS
+      await publishToRelays(signed, targetRelays)
+
+      // Remove from local state
+      if (article.isDraft) {
+        setDrafts(prev => prev.filter(d => d.slug !== article.slug))
+      } else {
+        setArticles(prev => prev.filter(a => a.slug !== article.slug))
+      }
+
+      setPublishResult({ success: true, message: 'Deletion request sent to relays' })
+    } catch (e: any) {
+      setPublishResult({ success: false, message: e.message || 'Delete failed' })
+    }
+  }, [pubkey, relays, authMethod])
+
   const state: NostrState = {
     pubkey,
     npub,
@@ -415,6 +451,7 @@ export function useNostr(): [NostrState, NostrActions] {
     toggleRelay,
     addRelay,
     removeRelay,
+    deleteArticle,
     publish,
     loadArticles,
     clearPublishResult,

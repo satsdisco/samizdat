@@ -9,6 +9,7 @@ interface SidebarProps {
   isOpen: boolean
   onClose: () => void
   onLoadArticle: (article: Article) => void
+  onDeleteArticle: (article: Article) => void
   onNewArticle: () => void
   onRefresh: () => void
 }
@@ -20,10 +21,12 @@ export function Sidebar({
   isOpen,
   onClose,
   onLoadArticle,
+  onDeleteArticle,
   onNewArticle,
   onRefresh,
 }: SidebarProps) {
   const [tab, setTab] = useState<'articles' | 'drafts'>('articles')
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   const items = tab === 'articles' ? articles : drafts
 
@@ -81,16 +84,51 @@ export function Sidebar({
           ) : (
             <ul className="article-list">
               {items.map(article => (
-                <li key={article.slug}>
-                  <button
-                    className="article-item"
-                    onClick={() => onLoadArticle(article)}
-                  >
-                    <span className="article-title">{article.title}</span>
-                    <span className="article-date">
-                      {formatDate(article.createdAt)}
-                    </span>
-                  </button>
+                <li key={article.slug} className="article-list-item">
+                  {confirmDelete === article.slug ? (
+                    <div className="article-confirm-delete">
+                      <span>Delete "{article.title.slice(0, 30)}{article.title.length > 30 ? '…' : ''}"?</span>
+                      <div className="confirm-actions">
+                        <button
+                          className="confirm-yes"
+                          onClick={() => {
+                            onDeleteArticle(article)
+                            setConfirmDelete(null)
+                          }}
+                        >
+                          Delete
+                        </button>
+                        <button
+                          className="confirm-no"
+                          onClick={() => setConfirmDelete(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="article-item-row">
+                      <button
+                        className="article-item"
+                        onClick={() => onLoadArticle(article)}
+                      >
+                        <span className="article-title">{article.title}</span>
+                        <span className="article-date">
+                          {formatDate(article.createdAt)}
+                        </span>
+                      </button>
+                      <button
+                        className="article-delete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setConfirmDelete(article.slug)
+                        }}
+                        title="Delete article"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

@@ -163,6 +163,7 @@ function App() {
         isOpen={showSidebar}
         onClose={() => setShowSidebar(false)}
         onLoadArticle={handleLoadArticle}
+        onDeleteArticle={actions.deleteArticle}
         onNewArticle={handleNewArticle}
         onRefresh={actions.loadArticles}
       />
