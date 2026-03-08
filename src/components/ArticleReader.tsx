@@ -102,6 +102,31 @@ export function ArticleReader() {
     }
   }, [commentText, article])
 
+  // Compute derived state (must be after hooks, before returns)
+  const zapGateAmount = article?.zapGate
+  const previewEnd = article?.previewEnd
+  const isGated = !!zapGateAmount && !!previewEnd
+
+  let bodyHtml = ''
+  let isUnlocked = false
+
+  if (article) {
+    if (isGated) {
+      const zapKey = `samizdat_zapped_${article.id}`
+      isUnlocked = !!localStorage.getItem(zapKey)
+
+      if (isUnlocked) {
+        bodyHtml = markdownToHtml(article.content)
+      } else {
+        const paragraphs = article.content.split(/\n\n+/)
+        const previewMd = paragraphs.slice(0, previewEnd).join('\n\n')
+        bodyHtml = markdownToHtml(previewMd)
+      }
+    } else {
+      bodyHtml = markdownToHtml(article.content)
+    }
+  }
+
   if (loading) {
     return (
       <div className="reader-page">
@@ -123,31 +148,6 @@ export function ArticleReader() {
         </div>
       </div>
     )
-  }
-
-  const zapGateAmount = article.zapGate
-  const previewEnd = article.previewEnd
-  const isGated = !!zapGateAmount && !!previewEnd
-
-  // Split content for gated articles
-  let bodyHtml: string
-  let isUnlocked = false
-
-  if (isGated) {
-    // Check if user has zapped (stored in localStorage for MVP)
-    const zapKey = `samizdat_zapped_${article.id}`
-    isUnlocked = !!localStorage.getItem(zapKey)
-
-    if (isUnlocked) {
-      bodyHtml = markdownToHtml(article.content)
-    } else {
-      // Split markdown at paragraph boundary
-      const paragraphs = article.content.split(/\n\n+/)
-      const previewMd = paragraphs.slice(0, previewEnd).join('\n\n')
-      bodyHtml = markdownToHtml(previewMd)
-    }
-  } else {
-    bodyHtml = markdownToHtml(article.content)
   }
 
   const handleUnlock = async () => {

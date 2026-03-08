@@ -42,11 +42,15 @@ export async function fetchArticleByNaddr(naddrStr: string): Promise<ArticleData
   const relays = decoded.relays?.length ? decoded.relays : DEFAULT_RELAYS
 
   try {
-    const event = await pool.get(relays, {
-      kinds: [decoded.kind],
-      authors: [decoded.pubkey],
-      '#d': [decoded.identifier],
-    })
+    // Add timeout to prevent hanging on dead relays
+    const event = await Promise.race([
+      pool.get(relays, {
+        kinds: [decoded.kind],
+        authors: [decoded.pubkey],
+        '#d': [decoded.identifier],
+      }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 10000)),
+    ])
 
     if (!event) return null
 
