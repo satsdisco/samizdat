@@ -440,18 +440,17 @@
 .broadsheet-col {
   padding: 1.5rem 1.8rem;
   border-left: 1px solid var(--landing-black);
+  display: flex;
+  flex-direction: column;
 }
 
 .broadsheet-col:first-child {
   border-left: none;
 }
 
-.lead-col .article-block:first-child h3 {
-  font-size: 1.15rem;
-}
-
 .article-block {
   margin-bottom: 0;
+  flex: 1;
 }
 
 .article-num {
@@ -489,6 +488,7 @@
   height: 1px;
   background: var(--landing-border);
   margin: 1.5rem 0;
+  flex: 0;
 }
 
 /* Manifesto — the soul */
