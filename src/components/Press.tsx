@@ -164,6 +164,17 @@ export function Press() {
   const [bookmarksLoaded, setBookmarksLoaded] = useState(false)
   const [bookmarkIds, setBookmarkIds] = useState<Set<string>>(new Set())
 
+  // Section expansion
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const toggleSection = useCallback((section: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev)
+      next.has(section) ? next.delete(section) : next.add(section)
+      return next
+    })
+  }, [])
+  const COLLAPSED_COUNT = 6
+
   // Curation editor
   const [showCurate, setShowCurate] = useState(false)
   const [curateInput, setCurateInput] = useState('')
@@ -256,8 +267,8 @@ export function Press() {
           .filter(a => (a.reactions || 0) < 1)
           .sort((a, b) => b.publishedAt - a.publishedAt)
 
-        // Engaged articles first, then backfill with recent to ensure we always show content
-        allArticles.trending = [...withEngagement, ...withoutEngagement].slice(0, 12)
+        // Engaged articles first, then backfill with recent — keep more for pagination
+        allArticles.trending = [...withEngagement, ...withoutEngagement].slice(0, 24)
 
         // Fetch profiles
         const allArts = [...allArticles.curated, ...allArticles.exclusive, ...allArticles.trending]
@@ -566,7 +577,7 @@ export function Press() {
                 )}
 
                 <div className="press-grid">
-                  {curatedArticles.map(article => (
+                  {(expandedSections.has('curated') ? curatedArticles : curatedArticles.slice(0, COLLAPSED_COUNT)).map(article => (
                     <ArticleCard
                       key={article.id}
                       article={article}
@@ -574,6 +585,13 @@ export function Press() {
                     />
                   ))}
                 </div>
+                {curatedArticles.length > COLLAPSED_COUNT && (
+                  <button className="press-show-more" onClick={() => toggleSection('curated')}>
+                    {expandedSections.has('curated')
+                      ? 'Show less'
+                      : `See all ${curatedArticles.length} →`}
+                  </button>
+                )}
               </section>
             )}
 
@@ -582,7 +600,7 @@ export function Press() {
               <section className="press-section">
                 <h2 className="press-section-label">⚡ Samizdat Exclusives</h2>
                 <div className="press-grid">
-                  {exclusiveArticles.map(article => (
+                  {(expandedSections.has('exclusive') ? exclusiveArticles : exclusiveArticles.slice(0, COLLAPSED_COUNT)).map(article => (
                     <ArticleCard
                       key={article.id}
                       article={article}
@@ -590,6 +608,13 @@ export function Press() {
                     />
                   ))}
                 </div>
+                {exclusiveArticles.length > COLLAPSED_COUNT && (
+                  <button className="press-show-more" onClick={() => toggleSection('exclusive')}>
+                    {expandedSections.has('exclusive')
+                      ? 'Show less'
+                      : `See all ${exclusiveArticles.length} →`}
+                  </button>
+                )}
               </section>
             ) : (
               <section className="press-section press-exclusives-promo">
@@ -607,7 +632,7 @@ export function Press() {
               <section className="press-section">
                 <h2 className="press-section-label">Fresh Off the Press</h2>
                 <div className="press-grid">
-                  {trendingArticles.map(article => (
+                  {(expandedSections.has('trending') ? trendingArticles : trendingArticles.slice(0, COLLAPSED_COUNT)).map(article => (
                     <ArticleCard
                       key={article.id}
                       article={article}
@@ -615,6 +640,13 @@ export function Press() {
                     />
                   ))}
                 </div>
+                {trendingArticles.length > COLLAPSED_COUNT && (
+                  <button className="press-show-more" onClick={() => toggleSection('trending')}>
+                    {expandedSections.has('trending')
+                      ? 'Show less'
+                      : `See all ${trendingArticles.length} →`}
+                  </button>
+                )}
               </section>
             )}
 
@@ -639,7 +671,7 @@ export function Press() {
               <section className="press-section">
                 <h2 className="press-section-label">From Your People</h2>
                 <div className="press-grid">
-                  {feedArticles.map(article => (
+                  {(expandedSections.has('feed') ? feedArticles : feedArticles.slice(0, COLLAPSED_COUNT)).map(article => (
                     <ArticleCard
                       key={article.id}
                       article={article}
@@ -647,6 +679,13 @@ export function Press() {
                     />
                   ))}
                 </div>
+                {feedArticles.length > COLLAPSED_COUNT && (
+                  <button className="press-show-more" onClick={() => toggleSection('feed')}>
+                    {expandedSections.has('feed')
+                      ? 'Show less'
+                      : `See all ${feedArticles.length} →`}
+                  </button>
+                )}
               </section>
             ) : (
               <div className="press-empty-state">
@@ -673,7 +712,7 @@ export function Press() {
               <section className="press-section">
                 <h2 className="press-section-label">Saved for Later</h2>
                 <div className="press-grid">
-                  {bookmarkedArticles.map(article => (
+                  {(expandedSections.has('bookmarks') ? bookmarkedArticles : bookmarkedArticles.slice(0, COLLAPSED_COUNT)).map(article => (
                     <ArticleCard
                       key={article.id}
                       article={article}
@@ -681,6 +720,13 @@ export function Press() {
                     />
                   ))}
                 </div>
+                {bookmarkedArticles.length > COLLAPSED_COUNT && (
+                  <button className="press-show-more" onClick={() => toggleSection('bookmarks')}>
+                    {expandedSections.has('bookmarks')
+                      ? 'Show less'
+                      : `See all ${bookmarkedArticles.length} →`}
+                  </button>
+                )}
               </section>
             ) : (
               <div className="press-empty-state">

@@ -470,6 +470,27 @@
 
 .press-promo-cta:hover { opacity: 0.8; }
 
+/* Show more / See all button */
+.press-show-more {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 0;
+  margin-top: 0.2rem;
+  background: none;
+  border: none;
+  border-top: 1px solid #1a1a1a;
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  color: #777;
+  cursor: pointer;
+  text-align: center;
+  transition: color 0.15s;
+}
+
+.press-show-more:hover {
+  color: var(--accent);
+}
+
 /* Article card wrapper (for bookmark button) */
 .press-card-wrap {
   position: relative;
