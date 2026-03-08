@@ -258,17 +258,27 @@ export function useNostr(): [NostrState, NostrActions] {
 
   // Sign an event based on auth method
   const signEvent = async (event: NostrEvent): Promise<NostrEvent> => {
+    let signed: NostrEvent
+
     if (authMethod === 'extension') {
-      return signWithExtension(event)
-    }
-    if (authMethod === 'bunker' && bunkerSignerRef.current) {
-      return bunkerSignerRef.current.signEvent(event)
-    }
-    if (authMethod === 'nsec' && secretKeyRef.current) {
+      signed = await signWithExtension(event)
+    } else if (authMethod === 'bunker' && bunkerSignerRef.current) {
+      signed = await bunkerSignerRef.current.signEvent(event)
+    } else if (authMethod === 'nsec' && secretKeyRef.current) {
       const { finalizeEvent } = await import('nostr-tools/pure')
-      return finalizeEvent(event as any, secretKeyRef.current) as any
+      signed = finalizeEvent(event as any, secretKeyRef.current) as any
+    } else {
+      // Auth method saved but signer lost (e.g., page reload with bunker)
+      throw new Error('Session expired. Please sign in again.')
     }
-    throw new Error('Not signed in. Please log in first.')
+
+    // Ensure signed event has all required fields
+    if (!signed.id || !signed.sig || !signed.pubkey) {
+      console.error('signEvent returned incomplete event:', signed)
+      throw new Error('Signer returned an incomplete event (missing id/sig/pubkey)')
+    }
+
+    return signed
   }
 
   // Publish an article

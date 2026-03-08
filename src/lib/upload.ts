@@ -1,5 +1,4 @@
 // Image upload to nostr.build with NIP-98 auth
-// Falls back to nip96 endpoint which requires a signed auth event
 
 const UPLOAD_ENDPOINT = 'https://nostr.build/api/v2/nip96/upload'
 
@@ -32,7 +31,31 @@ async function buildNip98Auth(url: string, method: string, signEvent: SignEventF
   }
 
   const signed = await signEvent(event)
-  return btoa(JSON.stringify(signed))
+
+  // Verify the signed event has required fields
+  if (!signed.id || !signed.sig || !signed.pubkey) {
+    console.error('NIP-98: signed event missing required fields:', { 
+      hasId: !!signed.id, hasSig: !!signed.sig, hasPubkey: !!signed.pubkey 
+    })
+    throw new Error('Signed event is missing id, sig, or pubkey')
+  }
+
+  // Build the minimal NIP-98 event object with correct field order
+  const authEvent = {
+    id: signed.id,
+    pubkey: signed.pubkey,
+    created_at: signed.created_at,
+    kind: signed.kind,
+    tags: signed.tags,
+    content: signed.content,
+    sig: signed.sig,
+  }
+
+  // Use TextEncoder for safe base64 encoding (handles all characters)
+  const jsonStr = JSON.stringify(authEvent)
+  const bytes = new TextEncoder().encode(jsonStr)
+  const base64 = btoa(String.fromCharCode(...bytes))
+  return base64
 }
 
 export async function uploadImage(file: File, signEvent?: SignEventFn): Promise<UploadResult> {
@@ -46,9 +69,12 @@ export async function uploadImage(file: File, signEvent?: SignEventFn): Promise<
     try {
       const authToken = await buildNip98Auth(UPLOAD_ENDPOINT, 'POST', signEvent)
       headers['Authorization'] = `Nostr ${authToken}`
-    } catch (e) {
-      console.warn('NIP-98 auth failed, trying without:', e)
+    } catch (e: any) {
+      console.error('NIP-98 auth generation failed:', e)
+      throw new Error(`Auth failed: ${e.message}. Make sure your signer approved the request.`)
     }
+  } else {
+    throw new Error('Not signed in. Please log in to upload images.')
   }
 
   const response = await fetch(UPLOAD_ENDPOINT, {
@@ -76,7 +102,7 @@ export async function uploadImage(file: File, signEvent?: SignEventFn): Promise<
       url: getTag('url') || '',
       mimeType: getTag('m'),
       sha256: getTag('x'),
-      size: getTag('size') ? parseInt(getTag('size')) : undefined,
+      size: getTag('size') ? parseInt(getTag('size')!) : undefined,
       dimensions: getTag('dim'),
       blurhash: getTag('blurhash'),
     }
