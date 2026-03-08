@@ -206,24 +206,26 @@ export function useNostr(): [NostrState, NostrActions] {
       const clientSk = generateSecretKey()
       const clientPk = getPublicKey(clientSk)
 
-      // Use a well-known relay for the handshake
-      const connectRelay = 'wss://relay.nsec.app'
+      // Use well-known relays for the handshake
+      const connectRelays = ['wss://relay.nsec.app', 'wss://relay.damus.io']
       const secret = Math.random().toString(36).slice(2, 10)
 
       const uri = createNostrConnectURI({
         clientPubkey: clientPk,
-        relays: [connectRelay],
+        relays: connectRelays,
         secret,
         name: 'Samizdat',
         url: window.location.origin,
-        perms: ['sign_event:30023', 'sign_event:30024', 'get_public_key'],
+        perms: ['sign_event:30023', 'sign_event:30024', 'sign_event:27235', 'get_public_key'],
       })
 
+      // Start listening IMMEDIATELY so we don't miss Amber's response
+      setIsLoggingIn(true)
+      const signerPromise = BunkerSigner.fromURI(clientSk, uri, {}, 120000) // 2 min timeout
+
       const waitForConnection = async () => {
-        setIsLoggingIn(true)
         try {
-          // fromURI waits for the remote signer to respond
-          const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 120000) // 2 min timeout
+          const signer = await signerPromise
           const pk = await signer.getPublicKey()
 
           bunkerSignerRef.current = signer
@@ -239,6 +241,7 @@ export function useNostr(): [NostrState, NostrActions] {
       return { uri, waitForConnection }
     } catch (e: any) {
       setLoginError(e.message || 'Failed to generate QR code')
+      setIsLoggingIn(false)
       return null
     }
   }, [])
