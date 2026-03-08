@@ -393,90 +393,100 @@
 
 .mock-spacer { height: 0.4rem; }
 
-/* Features — stamp/block style */
+/* Features — newspaper broadsheet */
 .features-section {
-  padding: 4rem 2rem 6rem;
-  max-width: 1100px;
+  padding: 4rem 2rem 5rem;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
-.features-header {
+/* Masthead — newspaper header */
+.features-masthead {
   text-align: center;
-  margin-bottom: 4rem;
+  margin-bottom: 3rem;
 }
 
-.features-header h2 {
-  font-family: var(--landing-headline);
-  font-size: clamp(1.8rem, 4vw, 3rem);
-  font-weight: 700;
-  line-height: 1.1;
-  text-transform: uppercase;
-  color: var(--landing-black);
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-}
-
-.feature-card {
-  background: var(--landing-card-bg);
-  border: 2px solid var(--landing-black);
-  padding: 1.8rem 1.5rem;
-  transition: all 0.2s;
-  position: relative;
-}
-
-.feature-card::before {
-  content: '';
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  right: -4px;
-  bottom: -4px;
+.masthead-rule {
+  height: 3px;
   background: var(--landing-black);
-  z-index: -1;
-  transition: all 0.2s;
+  margin: 0.8rem 0;
 }
 
-.feature-card:hover {
-  transform: translate(-2px, -2px);
+.features-masthead h2 {
+  font-family: var(--landing-blackletter);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 700;
+  color: var(--landing-black);
+  line-height: 1;
+  margin: 0.6rem 0 0.3rem;
 }
 
-.feature-card:hover::before {
-  top: 6px;
-  left: 6px;
+.masthead-subtitle {
+  font-family: var(--landing-typewriter);
+  font-size: 0.8rem;
+  color: var(--landing-text-faint);
+  margin: 0;
 }
 
-.feature-icon {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--landing-red);
+/* Broadsheet columns */
+.broadsheet {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  border-top: 2px solid var(--landing-black);
+  border-bottom: 2px solid var(--landing-black);
+}
+
+.broadsheet-col {
+  padding: 1.5rem 1.8rem;
+  border-left: 1px solid var(--landing-black);
+}
+
+.broadsheet-col:first-child {
+  border-left: none;
+}
+
+.lead-col .article-block:first-child h3 {
+  font-size: 1.15rem;
+}
+
+.article-block {
+  margin-bottom: 0;
+}
+
+.article-num {
+  font-family: var(--landing-blackletter);
+  font-size: 1.5rem;
   color: var(--landing-red);
-  margin-bottom: 1rem;
+  display: block;
+  line-height: 1;
+  margin-bottom: 0.4rem;
 }
 
-.feature-card h3 {
+.article-block h3 {
   font-family: var(--landing-headline);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   color: var(--landing-black);
   margin-bottom: 0.5rem;
+  line-height: 1.2;
 }
 
-.feature-card p {
-  font-family: var(--landing-typewriter);
-  font-size: 0.82rem;
-  line-height: 1.6;
+.article-block p {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  line-height: 1.65;
   color: var(--landing-text-secondary);
+  text-align: justify;
+  hyphens: auto;
+}
+
+.col-divider {
+  height: 1px;
+  background: var(--landing-border);
+  margin: 1.5rem 0;
 }
 
 /* Manifesto — the soul */
@@ -604,8 +614,8 @@
 
 /* Responsive */
 @media (max-width: 900px) {
-  .features-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .broadsheet {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -618,8 +628,17 @@
     padding: 5rem 1.2rem 3rem;
   }
 
-  .features-grid {
+  .broadsheet {
     grid-template-columns: 1fr;
+  }
+
+  .broadsheet-col {
+    border-left: none;
+    border-top: 1px solid var(--landing-black);
+  }
+
+  .broadsheet-col:first-child {
+    border-top: none;
   }
 
   .hero-actions {

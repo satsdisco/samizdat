@@ -117,95 +117,83 @@ export function Landing({ onGetStarted }: LandingProps) {
         </div>
       </section>
 
-      {/* Features */}
+      {/* Features — newspaper broadsheet style */}
       <section className="features-section">
-        <div className="features-header">
-          <h2>Built for writers who refuse to be silenced</h2>
+        <div className="features-masthead">
+          <div className="masthead-rule" />
+          <h2>THE SAMIZDAT DISPATCH</h2>
+          <p className="masthead-subtitle">What makes this different from every other writing tool</p>
+          <div className="masthead-rule" />
         </div>
 
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
+        <div className="broadsheet">
+          <div className="broadsheet-col lead-col">
+            <div className="article-block">
+              <span className="article-num">I.</span>
+              <h3>Your Keys Are Your Passport</h3>
+              <p>
+                No email. No password. No account to create or delete.
+                Sign in with your nostr identity — a cryptographic key pair
+                that you own forever. No platform can lock you out
+                of your own name.
+              </p>
             </div>
-            <h3>Your Keys, Your Identity</h3>
-            <p>
-              Sign in with your nostr identity. No email, no password, no account.
-              Your cryptographic keys are your passport — own them forever.
-            </p>
+            <div className="col-divider" />
+            <div className="article-block">
+              <span className="article-num">II.</span>
+              <h3>Published Across the World</h3>
+              <p>
+                Your articles live on nostr relays — independent servers
+                run by people everywhere. Not one company's database.
+                Take down one relay, the words live on a hundred others.
+                There is no kill switch.
+              </p>
+            </div>
           </div>
 
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
+          <div className="broadsheet-col">
+            <div className="article-block">
+              <span className="article-num">III.</span>
+              <h3>The Tool Disappears</h3>
+              <p>
+                A writer-first editor that gets out of the way.
+                Rich formatting, drag-and-drop images, live preview.
+                No dashboards, no analytics panels, no engagement metrics.
+                Just you and the words.
+              </p>
             </div>
-            <h3>Published Everywhere</h3>
-            <p>
-              Your articles live on nostr relays around the world, not on a single server.
-              No one can take them down. No one can shut you off.
-            </p>
+            <div className="col-divider" />
+            <div className="article-block">
+              <span className="article-num">IV.</span>
+              <h3>Sign From Your Phone</h3>
+              <p>
+                Scan a QR code with Amber or any nostr signer.
+                Your private key never touches the browser.
+                Approve each publication from your pocket.
+              </p>
+            </div>
           </div>
 
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-              </svg>
+          <div className="broadsheet-col">
+            <div className="article-block">
+              <span className="article-num">V.</span>
+              <h3>Images Without Permission</h3>
+              <p>
+                Drag, drop, or paste images right into the text.
+                They upload to decentralized hosting — no accounts,
+                no content policies, no takedowns. Permanent by default.
+              </p>
             </div>
-            <h3>Writer-First Editor</h3>
-            <p>
-              Beautiful, distraction-free writing with rich formatting.
-              Drag in images, preview your article, publish when ready.
-              The tool disappears so the writing can breathe.
-            </p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="3" y="11" width="18" height="11" rx="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
+            <div className="col-divider" />
+            <div className="article-block">
+              <span className="article-num">VI.</span>
+              <h3>Living Documents</h3>
+              <p>
+                Save drafts to relays. Pick up on any device.
+                Edit and republish — your articles evolve with you.
+                Every version signed, every change yours.
+              </p>
             </div>
-            <h3>Sign from Your Phone</h3>
-            <p>
-              Use a mobile signer like Amber to approve publications.
-              Your private key never touches the browser. Scan a QR code and go.
-            </p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <path d="m21 15-5-5L5 21" />
-              </svg>
-            </div>
-            <h3>Images Built In</h3>
-            <p>
-              Drag, drop, or paste images directly into your article.
-              They're uploaded to nostr-native hosting — permanent, decentralized, free.
-            </p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
-            </div>
-            <h3>Drafts & History</h3>
-            <p>
-              Save drafts to nostr relays, pick up where you left off on any device.
-              Edit and republish — your articles are living documents.
-            </p>
           </div>
         </div>
       </section>
