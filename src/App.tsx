@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { TitleBar } from './components/TitleBar'
+import { ArticleReader } from './components/ArticleReader'
 import { Editor, type EditorRef } from './components/Editor'
 import { Sidebar } from './components/Sidebar'
 import { PublishModal } from './components/PublishModal'
@@ -101,27 +103,28 @@ function App() {
     }
   }, [nostr.publishResult])
 
-  // Show landing page or login screen if not authenticated
-  if (!nostr.pubkey) {
-    if (showLogin) {
-      return (
-        <LoginScreen
-          onExtensionLogin={actions.loginWithExtension}
-          onBunkerLogin={actions.loginWithBunker}
-          onNsecLogin={actions.loginWithNsec}
-          onQrLogin={actions.initiateQrLogin}
-          isLoggingIn={nostr.isLoggingIn}
-          loginError={nostr.loginError}
-          hasExtension={typeof window !== 'undefined' && !!window.nostr}
-        />
-      )
+  // Editor view (landing/login/editor based on auth state)
+  const editorView = () => {
+    if (!nostr.pubkey) {
+      if (showLogin) {
+        return (
+          <LoginScreen
+            onExtensionLogin={actions.loginWithExtension}
+            onBunkerLogin={actions.loginWithBunker}
+            onNsecLogin={actions.loginWithNsec}
+            onQrLogin={actions.initiateQrLogin}
+            isLoggingIn={nostr.isLoggingIn}
+            loginError={nostr.loginError}
+            hasExtension={typeof window !== 'undefined' && !!window.nostr}
+          />
+        )
+      }
+      return <Landing onGetStarted={() => setShowLogin(true)} />
     }
-    return <Landing onGetStarted={() => setShowLogin(true)} />
-  }
 
-  return (
-    <div className="app">
-      <TitleBar
+    return (
+      <div className="app">
+        <TitleBar
         wordCount={wordCount}
         onPublish={() => setShowPublishModal(true)}
         onSaveDraft={handleSaveDraft}
@@ -192,6 +195,16 @@ function App() {
         />
       )}
     </div>
+    )
+  }
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/a/:naddr" element={<ArticleReader />} />
+        <Route path="*" element={editorView()} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
