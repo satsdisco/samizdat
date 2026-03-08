@@ -34,30 +34,60 @@ interface PressArticle {
 
 function formatDate(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString('en-US', {
-    month: 'long',
+    month: 'short',
     day: 'numeric',
     year: 'numeric',
   })
 }
 
+function ArticleCard({ article }: { article: PressArticle }) {
+  return (
+    <Link to={`/a/${article.naddr}`} className="press-card">
+      {article.image && (
+        <div className="press-card-thumb">
+          <img src={article.image} alt="" loading="lazy" />
+        </div>
+      )}
+      <div className="press-card-text">
+        <h3 className="press-card-title">{article.title}</h3>
+        {article.summary && (
+          <p className="press-card-summary">{article.summary}</p>
+        )}
+        <div className="press-card-meta">
+          {article.author?.picture && (
+            <img src={article.author.picture} alt="" className="press-card-avatar" />
+          )}
+          <span className="press-card-author">
+            {article.author?.name || article.pubkey.slice(0, 12) + '…'}
+          </span>
+          <span className="press-card-dot">·</span>
+          <span className="press-card-date">{formatDate(article.publishedAt)}</span>
+          {article.zapGated && <span className="press-zap-badge">⚡</span>}
+          {(article.reactions || 0) > 0 && (
+            <span className="press-reactions">♡ {article.reactions}</span>
+          )}
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 export function Press() {
   const [curatedArticles, setCuratedArticles] = useState<PressArticle[]>([])
   const [trendingArticles, setTrendingArticles] = useState<PressArticle[]>([])
+  const [exclusiveArticles, setExclusiveArticles] = useState<PressArticle[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadArticles() {
       const pool = new SimplePool()
       try {
-        // Fetch curated authors + recent articles in parallel
         const [curatedEvents, recentEvents] = await Promise.all([
-          // Curated: specific authors
           pool.querySync(DEFAULT_RELAYS, {
             kinds: [30023],
             authors: CURATED_AUTHORS,
             limit: 20,
           }),
-          // Recent: anyone
           pool.querySync(DEFAULT_RELAYS, {
             kinds: [30023],
             limit: 60,
@@ -88,7 +118,6 @@ export function Press() {
           }
         }
 
-        // Deduplicate helper
         const dedup = (events: typeof curatedEvents) => {
           const seen = new Map<string, typeof events[0]>()
           for (const e of events) {
@@ -100,69 +129,63 @@ export function Press() {
           return Array.from(seen.values()).sort((a, b) => b.created_at - a.created_at)
         }
 
-        // Build curated list
         const curated = dedup(curatedEvents)
           .map(toArticle)
           .filter((a): a is PressArticle => a !== null)
           .slice(0, 8)
 
-        // Build trending: recent articles NOT from curated authors
         const curatedIds = new Set(curated.map(a => a.id))
         const recent = dedup(recentEvents)
           .map(toArticle)
           .filter((a): a is PressArticle => a !== null && !curatedIds.has(a.id))
 
-        // Count reactions for trending scoring
-        if (recent.length > 0) {
-          const articleIds = recent.slice(0, 20).map(a => a.id)
+        // Separate zapwalled articles
+        const exclusive = recent.filter(a => a.zapGated)
+        const nonExclusive = recent.filter(a => !a.zapGated)
+
+        // Count reactions for trending
+        if (nonExclusive.length > 0) {
+          const articleIds = nonExclusive.slice(0, 20).map(a => a.id)
           try {
             const reactions = await pool.querySync(DEFAULT_RELAYS, {
-              kinds: [7, 9735], // likes + zaps
+              kinds: [7, 9735],
               '#e': articleIds,
               limit: 200,
             })
-
-            // Count per article
             const counts = new Map<string, number>()
             for (const r of reactions) {
               for (const tag of r.tags) {
                 if (tag[0] === 'e' && articleIds.includes(tag[1])) {
-                  counts.set(tag[1], (counts.get(tag[1]) || 0) + (r.kind === 9735 ? 3 : 1)) // zaps worth 3x
+                  counts.set(tag[1], (counts.get(tag[1]) || 0) + (r.kind === 9735 ? 3 : 1))
                 }
               }
             }
-
-            // Attach counts and sort
-            for (const art of recent) {
+            for (const art of nonExclusive) {
               art.reactions = counts.get(art.id) || 0
             }
-          } catch {
-            // Reaction counting failed, just use recency
-          }
+          } catch { /* reaction counting failed */ }
         }
 
-        // Sort trending: reactions first, then recency
-        const trending = recent
+        const trending = nonExclusive
           .sort((a, b) => (b.reactions || 0) - (a.reactions || 0) || b.publishedAt - a.publishedAt)
-          .slice(0, 10)
+          .slice(0, 12)
 
-        // Fetch profiles for all unique pubkeys
-        const allArts = [...curated, ...trending]
+        // Fetch profiles
+        const allArts = [...curated, ...exclusive, ...trending]
         const pubkeys = [...new Set(allArts.map(a => a.pubkey))]
         const profiles = new Map<string, PressArticle['author']>()
-
         await Promise.allSettled(
           pubkeys.slice(0, 15).map(async pk => {
             const p = await fetchProfile(pk, DEFAULT_RELAYS)
             if (p) profiles.set(pk, p)
           })
         )
-
         for (const art of allArts) {
           art.author = profiles.get(art.pubkey) || undefined
         }
 
         setCuratedArticles(curated)
+        setExclusiveArticles(exclusive)
         setTrendingArticles(trending)
       } catch (e) {
         console.error('Failed to load press:', e)
@@ -171,7 +194,6 @@ export function Press() {
         setLoading(false)
       }
     }
-
     loadArticles()
   }, [])
 
@@ -179,14 +201,18 @@ export function Press() {
     <div className="press">
       <nav className="press-nav">
         <Link to="/" className="press-wordmark">samizdat</Link>
-        <span className="press-subtitle">the press</span>
+        <div className="press-nav-right">
+          <span className="press-subtitle">the press</span>
+          <Link to="/" className="press-write-link">Start Writing →</Link>
+        </div>
       </nav>
 
       <header className="press-header">
-        <div className="press-rule" />
-        <h1 className="press-title">The Latest</h1>
-        <p className="press-description">Long-form writing from across the nostr network</p>
-        <div className="press-rule" />
+        <div className="press-rule-heavy" />
+        <div className="press-dateline">
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+        </div>
+        <div className="press-rule-light" />
       </header>
 
       {loading ? (
@@ -194,78 +220,50 @@ export function Press() {
           <span className="press-loading-text">Tuning into relays…</span>
         </div>
       ) : (
-        <>
-          {/* Editor's Picks — curated authors */}
+        <main className="press-content">
+          {/* Editor's Picks */}
           {curatedArticles.length > 0 && (
             <section className="press-section">
-              <h2 className="press-section-title">Editor's Picks</h2>
-              <div className="press-section-rule" />
-
-              {/* Featured: first curated article with an image */}
-              {curatedArticles[0] && (
-                <Link to={`/a/${curatedArticles[0].naddr}`} className="press-featured">
-                  {curatedArticles[0].image && (
-                    <div className="press-featured-image">
-                      <img src={curatedArticles[0].image} alt="" />
-                    </div>
-                  )}
-                  <div className="press-featured-text">
-                    <h2 className="press-featured-title">{curatedArticles[0].title}</h2>
-                    {curatedArticles[0].summary && (
-                      <p className="press-featured-summary">{curatedArticles[0].summary}</p>
-                    )}
-                    <div className="press-featured-meta">
-                      <span className="press-article-author">
-                        {curatedArticles[0].author?.name || curatedArticles[0].pubkey.slice(0, 12) + '…'}
-                      </span>
-                      <span className="press-article-date">{formatDate(curatedArticles[0].publishedAt)}</span>
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {/* Rest of curated */}
-              <div className="press-list">
-                {curatedArticles.slice(1).map((article, i) => (
-                  <Link key={article.id} to={`/a/${article.naddr}`} className="press-item">
-                    <span className="press-item-num">{String(i + 1).padStart(2, '0')}</span>
-                    <div className="press-item-content">
-                      <h3 className="press-item-title">{article.title}</h3>
-                      {article.summary && <p className="press-item-summary">{article.summary}</p>}
-                      <div className="press-item-meta">
-                        <span className="press-article-author">{article.author?.name || article.pubkey.slice(0, 12) + '…'}</span>
-                        <span className="press-article-date">{formatDate(article.publishedAt)}</span>
-                        {article.zapGated && <span className="press-zap-badge">⚡</span>}
-                      </div>
-                    </div>
-                  </Link>
+              <h2 className="press-section-label">Editor's Picks</h2>
+              <div className="press-grid">
+                {curatedArticles.map(article => (
+                  <ArticleCard key={article.id} article={article} />
                 ))}
               </div>
             </section>
           )}
 
-          {/* Trending / Fresh — engagement-ranked */}
+          {/* Samizdat Exclusives (zapwalled) */}
+          {exclusiveArticles.length > 0 && (
+            <section className="press-section">
+              <h2 className="press-section-label">⚡ Samizdat Exclusives</h2>
+              <div className="press-grid">
+                {exclusiveArticles.map(article => (
+                  <ArticleCard key={article.id} article={article} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Placeholder when no exclusives yet */}
+          {exclusiveArticles.length === 0 && (
+            <section className="press-section press-exclusives-promo">
+              <div className="press-promo-card">
+                <span className="press-promo-icon">⚡</span>
+                <h3>Samizdat Exclusives</h3>
+                <p>Premium zap-gated articles from independent writers. Coming soon.</p>
+                <Link to="/" className="press-promo-cta">Publish yours →</Link>
+              </div>
+            </section>
+          )}
+
+          {/* Fresh Off the Press */}
           {trendingArticles.length > 0 && (
             <section className="press-section">
-              <h2 className="press-section-title">Fresh Off the Press</h2>
-              <div className="press-section-rule" />
-              <div className="press-list">
-                {trendingArticles.map((article, i) => (
-                  <Link key={article.id} to={`/a/${article.naddr}`} className="press-item">
-                    <span className="press-item-num">{String(i + 1).padStart(2, '0')}</span>
-                    <div className="press-item-content">
-                      <h3 className="press-item-title">{article.title}</h3>
-                      {article.summary && <p className="press-item-summary">{article.summary}</p>}
-                      <div className="press-item-meta">
-                        <span className="press-article-author">{article.author?.name || article.pubkey.slice(0, 12) + '…'}</span>
-                        <span className="press-article-date">{formatDate(article.publishedAt)}</span>
-                        {article.zapGated && <span className="press-zap-badge">⚡</span>}
-                        {(article.reactions || 0) > 0 && (
-                          <span className="press-reactions">♡ {article.reactions}</span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
+              <h2 className="press-section-label">Fresh Off the Press</h2>
+              <div className="press-grid">
+                {trendingArticles.map(article => (
+                  <ArticleCard key={article.id} article={article} />
                 ))}
               </div>
             </section>
@@ -273,17 +271,17 @@ export function Press() {
 
           {curatedArticles.length === 0 && trendingArticles.length === 0 && (
             <div className="press-empty">
-              No articles found. The underground press awaits its first publication.
+              The underground press awaits its first publication.
             </div>
           )}
-        </>
+        </main>
       )}
 
       <footer className="press-footer">
-        <div className="press-rule" />
+        <div className="press-rule-heavy" />
         <div className="press-footer-content">
-          <Link to="/" className="press-footer-link">← Write something</Link>
           <span className="press-footer-tagline">Uncensorable publishing on nostr</span>
+          <Link to="/" className="press-footer-link">← Back to Samizdat</Link>
         </div>
       </footer>
     </div>
