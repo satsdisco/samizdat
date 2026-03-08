@@ -39,6 +39,8 @@ export function LoginScreen({
   const handleNsecSubmit = () => {
     const input = nsecInput.trim()
     if (!input) return
+    // Clear the input immediately — don't keep the key in DOM state longer than needed
+    setNsecInput('')
     onNsecLogin(input)
   }
 
