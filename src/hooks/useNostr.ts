@@ -55,6 +55,7 @@ interface NostrActions {
     slug?: string
     isDraft?: boolean
     existingPublishedAt?: number
+    zapGate?: { amount: number; previewEnd: number }
   }) => Promise<void>
   loadArticles: () => Promise<void>
   clearPublishResult: () => void
@@ -293,6 +294,7 @@ export function useNostr(): [NostrState, NostrActions] {
       slug?: string
       isDraft?: boolean
       existingPublishedAt?: number
+      zapGate?: { amount: number; previewEnd: number }
     } = {}
   ) => {
     if (!pubkey) {
@@ -319,6 +321,13 @@ export function useNostr(): [NostrState, NostrActions] {
       }
 
       const event = buildArticleEvent(article)
+
+      // Add zap gate tags if enabled
+      if (options.zapGate) {
+        event.tags.push(['zap_gate', String(options.zapGate.amount)])
+        event.tags.push(['preview_end', String(options.zapGate.previewEnd)])
+      }
+
       const signed = await signEvent(event)
 
       const writeRelays = relays.filter(r => r.write).map(r => r.url)

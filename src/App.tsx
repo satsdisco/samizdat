@@ -56,7 +56,7 @@ function App() {
   }, [nostr.isConnected])
 
   // Publish flow
-  const handlePublish = useCallback((options: { summary: string; tags: string[]; image: string }) => {
+  const handlePublish = useCallback((options: { summary: string; tags: string[]; image: string; zapGate?: { amount: number; previewEnd: number } }) => {
     actions.publish(title, currentHtml, {
       summary: options.summary,
       tags: options.tags,
@@ -64,8 +64,9 @@ function App() {
       slug: currentSlug,
       isDraft: false,
       existingPublishedAt: currentPublishedAt,
+      zapGate: options.zapGate,
     })
-  }, [title, currentHtml, currentSlug, currentPublishedAt, actions])
+  }, [title, currentHtml, currentSlug, currentPublishedAt, bannerImage, actions])
 
   // Save draft
   const handleSaveDraft = useCallback(() => {
@@ -185,6 +186,7 @@ function App() {
           onPublish={handlePublish}
           onClose={() => setShowPublishModal(false)}
           isPublishing={nostr.isPublishing}
+          paragraphCount={currentHtml.split(/<\/p>/i).length - 1 || 1}
         />
       )}
 

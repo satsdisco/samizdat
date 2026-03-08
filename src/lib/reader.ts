@@ -16,6 +16,8 @@ export interface ArticleData {
   publishedAt?: number
   createdAt: number
   slug: string
+  zapGate?: number    // sats amount
+  previewEnd?: number // paragraph cutoff
 }
 
 export interface CommentData {
@@ -62,6 +64,8 @@ export async function fetchArticleByNaddr(naddrStr: string): Promise<ArticleData
       publishedAt: getTag('published_at') ? parseInt(getTag('published_at')!) : undefined,
       createdAt: event.created_at,
       slug: getTag('d') || '',
+      zapGate: getTag('zap_gate') ? parseInt(getTag('zap_gate')!) : undefined,
+      previewEnd: getTag('preview_end') ? parseInt(getTag('preview_end')!) : undefined,
     }
   } finally {
     pool.close(relays)

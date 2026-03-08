@@ -124,7 +124,38 @@ export function ArticleReader() {
     )
   }
 
-  const bodyHtml = markdownToHtml(article.content)
+  const zapGateAmount = article.zapGate
+  const previewEnd = article.previewEnd
+  const isGated = !!zapGateAmount && !!previewEnd
+
+  // Split content for gated articles
+  let bodyHtml: string
+  let isUnlocked = false
+
+  if (isGated) {
+    // Check if user has zapped (stored in localStorage for MVP)
+    const zapKey = `samizdat_zapped_${article.id}`
+    isUnlocked = !!localStorage.getItem(zapKey)
+
+    if (isUnlocked) {
+      bodyHtml = markdownToHtml(article.content)
+    } else {
+      // Split markdown at paragraph boundary
+      const paragraphs = article.content.split(/\n\n+/)
+      const previewMd = paragraphs.slice(0, previewEnd).join('\n\n')
+      bodyHtml = markdownToHtml(previewMd)
+    }
+  } else {
+    bodyHtml = markdownToHtml(article.content)
+  }
+
+  const handleUnlock = () => {
+    // MVP: just mark as unlocked in localStorage
+    // Future: verify zap receipt on-chain
+    const zapKey = `samizdat_zapped_${article.id}`
+    localStorage.setItem(zapKey, '1')
+    window.location.reload()
+  }
 
   return (
     <div className="reader-page">
@@ -176,9 +207,34 @@ export function ArticleReader() {
 
         {/* Body */}
         <div
-          className="reader-body"
+          className={`reader-body ${isGated && !isUnlocked ? 'gated' : ''}`}
           dangerouslySetInnerHTML={{ __html: bodyHtml }}
         />
+
+        {/* Paywall */}
+        {isGated && !isUnlocked && (
+          <div className="paywall">
+            <div className="paywall-fade" />
+            <div className="paywall-content">
+              <span className="paywall-icon">⚡</span>
+              <h3>This article is zap-gated</h3>
+              <p>The author requires a zap of <strong>{zapGateAmount} sats</strong> to read the full article.</p>
+              {author?.nip05 && (
+                <p className="paywall-hint">
+                  Zap {author.name || 'the author'} via your favorite nostr client, then unlock below.
+                </p>
+              )}
+              <div className="paywall-actions">
+                <button className="paywall-unlock" onClick={handleUnlock}>
+                  I've zapped — unlock article
+                </button>
+              </div>
+              <p className="paywall-note">
+                MVP: Honor system. Future versions will verify zap receipts automatically.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <footer className="reader-footer">

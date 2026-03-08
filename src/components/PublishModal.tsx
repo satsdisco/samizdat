@@ -7,16 +7,21 @@ interface PublishModalProps {
     summary: string
     tags: string[]
     image: string
+    zapGate?: { amount: number; previewEnd: number }
   }) => void
   onClose: () => void
   isPublishing: boolean
+  paragraphCount: number
 }
 
-export function PublishModal({ title, onPublish, onClose, isPublishing }: PublishModalProps) {
+export function PublishModal({ title, onPublish, onClose, isPublishing, paragraphCount }: PublishModalProps) {
   const [summary, setSummary] = useState('')
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [image, setImage] = useState('')
+  const [zapGated, setZapGated] = useState(false)
+  const [zapAmount, setZapAmount] = useState(1000)
+  const [previewEnd, setPreviewEnd] = useState(Math.max(1, Math.floor(paragraphCount / 3)))
 
   const handleAddTag = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -34,7 +39,12 @@ export function PublishModal({ title, onPublish, onClose, isPublishing }: Publis
   }
 
   const handlePublish = () => {
-    onPublish({ summary, tags, image })
+    onPublish({
+      summary,
+      tags,
+      image,
+      zapGate: zapGated ? { amount: zapAmount, previewEnd } : undefined,
+    })
   }
 
   return (
@@ -93,6 +103,65 @@ export function PublishModal({ title, onPublish, onClose, isPublishing }: Publis
                     <button onClick={() => removeTag(tag)}>×</button>
                   </span>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Zap Gate */}
+          <div className="modal-divider" />
+          <div className="zap-gate-section">
+            <div className="zap-gate-toggle">
+              <div className="zap-gate-label">
+                <span className="zap-gate-icon">⚡</span>
+                <div>
+                  <span className="zap-gate-title">Zap-gated</span>
+                  <span className="zap-gate-desc">Require a zap to read the full article</span>
+                </div>
+              </div>
+              <button
+                className={`toggle-switch ${zapGated ? 'on' : ''}`}
+                onClick={() => setZapGated(!zapGated)}
+                type="button"
+              >
+                <span className="toggle-knob" />
+              </button>
+            </div>
+
+            {zapGated && (
+              <div className="zap-gate-options">
+                <div className="zap-gate-field">
+                  <label>Zap amount (sats)</label>
+                  <div className="zap-amount-row">
+                    {[100, 500, 1000, 5000, 10000].map(amt => (
+                      <button
+                        key={amt}
+                        className={`zap-preset ${zapAmount === amt ? 'active' : ''}`}
+                        onClick={() => setZapAmount(amt)}
+                        type="button"
+                      >
+                        {amt >= 1000 ? `${amt / 1000}k` : amt}
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      className="zap-custom"
+                      value={zapAmount}
+                      onChange={e => setZapAmount(Math.max(1, parseInt(e.target.value) || 0))}
+                      min={1}
+                    />
+                  </div>
+                </div>
+                <div className="zap-gate-field">
+                  <label>Free preview: first {previewEnd} of {paragraphCount} paragraphs</label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={Math.max(1, paragraphCount - 1)}
+                    value={previewEnd}
+                    onChange={e => setPreviewEnd(parseInt(e.target.value))}
+                    className="preview-slider"
+                  />
+                </div>
               </div>
             )}
           </div>
