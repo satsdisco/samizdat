@@ -38,12 +38,21 @@ export function Press() {
       try {
         const events = await pool.querySync(DEFAULT_RELAYS, {
           kinds: [30023],
-          limit: 30,
+          limit: 50,
+        })
+
+        // Filter: must have a real title and meaningful content
+        const quality = events.filter(e => {
+          const title = e.tags.find(t => t[0] === 'title')?.[1]
+          if (!title || title.trim().length < 5) return false
+          if (title.toLowerCase() === 'untitled') return false
+          if (e.content.length < 200) return false
+          return true
         })
 
         // Deduplicate by pubkey+slug (keep latest)
         const seen = new Map<string, typeof events[0]>()
-        for (const e of events) {
+        for (const e of quality) {
           const d = e.tags.find(t => t[0] === 'd')?.[1] || ''
           const key = `${e.pubkey}:${d}`
           const existing = seen.get(key)
