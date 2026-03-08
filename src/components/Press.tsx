@@ -247,11 +247,16 @@ export function Press() {
           } catch { /* reaction counting failed, keep all */ }
         }
 
-        // Filter: require ≥2 engagement score for Fresh Off the Press
-        allArticles.trending = freshCandidates
-          .filter(a => (a.reactions || 0) >= 2)
+        // Sort by engagement, prefer articles with reactions but backfill with recent if needed
+        const withEngagement = freshCandidates
+          .filter(a => (a.reactions || 0) >= 1)
           .sort((a, b) => (b.reactions || 0) - (a.reactions || 0))
-          .slice(0, 12)
+        const withoutEngagement = freshCandidates
+          .filter(a => (a.reactions || 0) < 1)
+          .sort((a, b) => b.publishedAt - a.publishedAt)
+
+        // Engaged articles first, then backfill with recent to ensure we always show content
+        allArticles.trending = [...withEngagement, ...withoutEngagement].slice(0, 12)
 
         // Fetch profiles
         const allArts = [...allArticles.curated, ...allArticles.exclusive, ...allArticles.trending]
@@ -728,6 +733,9 @@ function eventsToArticles(events: any[]): PressArticle[] {
       const title = getTag('title')
       if (!title || title.trim().length < 5 || title.toLowerCase() === 'untitled') return null
       if (e.content.length < 200) return null
+      // Filter bot spam: if same author has >5 articles in this batch, likely a bot
+      const authorCount = events.filter((ev: any) => ev.pubkey === e.pubkey).length
+      if (authorCount > 5) return null
 
       const slug = getTag('d') || ''
       return {
