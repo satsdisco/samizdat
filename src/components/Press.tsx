@@ -139,6 +139,37 @@ function ArticleCard({ article, onBookmark }: { article: PressArticle; onBookmar
   )
 }
 
+const LOADING_MESSAGES = [
+  'Tuning into relays…',
+  'Decentralization takes a sec…',
+  'Asking 4 relays nicely…',
+  'No servers to blame, just relays…',
+  'The underground press is warming up…',
+  'Fetching words that can\'t be censored…',
+  'Patience. Freedom isn\'t instant.',
+  'Relays are thinking about it…',
+  'This is what sovereignty feels like…',
+  'Gathering dispatches from the network…',
+  'The typewriters are still warm…',
+  'Negotiating with the decentralized gods…',
+  'Almost. The revolution will be relayed.',
+  'No CDN, no cache, just truth…',
+  'Your ISP can\'t see what we\'re loading…',
+]
+
+function useLoadingMessage() {
+  const [msg, setMsg] = useState(() =>
+    LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]
+  )
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMsg(LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)])
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
+  return msg
+}
+
 type TabView = 'press' | 'feed' | 'bookmarks'
 
 export function Press() {
@@ -181,6 +212,8 @@ export function Press() {
   const [curateStatus, setCurateStatus] = useState('')
   const [curatedPubkeys, setCuratedPubkeys] = useState<string[]>([])
   const [curatedProfiles, setCuratedProfiles] = useState<Map<string, Profile>>(new Map())
+
+  const loadingMsg = useLoadingMessage()
 
   // Check login on mount
   useEffect(() => {
@@ -516,7 +549,7 @@ export function Press() {
       {activeTab === 'press' && (
         loading ? (
           <div className="press-loading">
-            <span className="press-loading-text">Tuning into relays…</span>
+            <span className="press-loading-text">{loadingMsg}</span>
           </div>
         ) : (
           <main className="press-content">
@@ -663,7 +696,7 @@ export function Press() {
       {activeTab === 'feed' && (
         feedLoading ? (
           <div className="press-loading">
-            <span className="press-loading-text">Loading articles from people you follow…</span>
+            <span className="press-loading-text">{loadingMsg}</span>
           </div>
         ) : (
           <main className="press-content">
@@ -704,7 +737,7 @@ export function Press() {
       {activeTab === 'bookmarks' && (
         bookmarksLoading ? (
           <div className="press-loading">
-            <span className="press-loading-text">Loading your saved articles…</span>
+            <span className="press-loading-text">{loadingMsg}</span>
           </div>
         ) : (
           <main className="press-content">
