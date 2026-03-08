@@ -186,6 +186,24 @@ export function Press() {
 
   // === PRESS TAB (default, always loads) ===
   useEffect(() => {
+    // Try sessionStorage cache first (survives back-navigation)
+    const cached = sessionStorage.getItem('samizdat_press_cache')
+    if (cached) {
+      try {
+        const data = JSON.parse(cached)
+        const age = Date.now() - (data.ts || 0)
+        if (age < 5 * 60 * 1000) { // 5 min cache
+          setCuratedArticles(data.curated || [])
+          setExclusiveArticles(data.exclusive || [])
+          setTrendingArticles(data.trending || [])
+          setCuratedPubkeys(data.pubkeys || FALLBACK_AUTHORS)
+          if (data.editorProfile) setEditorProfile(data.editorProfile)
+          setLoading(false)
+          return
+        }
+      } catch { /* cache corrupt, reload */ }
+    }
+
     async function loadPress() {
       const pool = new SimplePool()
       try {
@@ -205,6 +223,36 @@ export function Press() {
 
         const allArticles = processEvents(curatedEvents, recentEvents, authors)
 
+        // Count reactions for Fresh Off the Press — filter out zero-engagement spam
+        const freshCandidates = allArticles.trending
+        if (freshCandidates.length > 0) {
+          const articleIds = freshCandidates.map(a => a.id)
+          try {
+            const reactions = await pool.querySync(DEFAULT_RELAYS, {
+              kinds: [7, 9735], // likes + zaps
+              '#e': articleIds,
+              limit: 300,
+            })
+            const counts = new Map<string, number>()
+            for (const r of reactions) {
+              for (const tag of r.tags) {
+                if (tag[0] === 'e' && articleIds.includes(tag[1])) {
+                  counts.set(tag[1], (counts.get(tag[1]) || 0) + (r.kind === 9735 ? 3 : 1))
+                }
+              }
+            }
+            for (const art of freshCandidates) {
+              art.reactions = counts.get(art.id) || 0
+            }
+          } catch { /* reaction counting failed, keep all */ }
+        }
+
+        // Filter: require ≥2 engagement score for Fresh Off the Press
+        allArticles.trending = freshCandidates
+          .filter(a => (a.reactions || 0) >= 2)
+          .sort((a, b) => (b.reactions || 0) - (a.reactions || 0))
+          .slice(0, 12)
+
         // Fetch profiles
         const allArts = [...allArticles.curated, ...allArticles.exclusive, ...allArticles.trending]
         await attachProfiles(pool, allArts)
@@ -212,6 +260,18 @@ export function Press() {
         setCuratedArticles(allArticles.curated)
         setExclusiveArticles(allArticles.exclusive)
         setTrendingArticles(allArticles.trending)
+
+        // Cache to sessionStorage
+        try {
+          sessionStorage.setItem('samizdat_press_cache', JSON.stringify({
+            ts: Date.now(),
+            curated: allArticles.curated,
+            exclusive: allArticles.exclusive,
+            trending: allArticles.trending,
+            pubkeys: authors,
+            editorProfile: ep,
+          }))
+        } catch { /* storage full, ignore */ }
       } catch (e) {
         console.error('Failed to load press:', e)
       } finally {
@@ -701,9 +761,10 @@ function processEvents(
     .filter(a => !curatedIds.has(a.id))
 
   const exclusive = recent.filter(a => a.zapGated)
+  // Return more candidates — actual filtering happens after reaction counting
   const trending = recent
     .filter(a => !a.zapGated)
-    .slice(0, 12)
+    .slice(0, 30)
 
   return { curated, exclusive, trending }
 }
