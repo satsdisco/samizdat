@@ -42,7 +42,12 @@ function savePressRelays(relays: string[]) {
 }
 
 // Fetch a NIP-51 curation list (kind 30001) from a specific pubkey
-async function fetchCurationList(pool: SimplePool, relays: string[], authorPubkey: string): Promise<string[]> {
+interface CurationData {
+  authors: string[]
+  pinnedArticles: { kind: number; pubkey: string; identifier: string }[]
+}
+
+async function fetchCurationList(pool: SimplePool, relays: string[], authorPubkey: string): Promise<CurationData> {
   try {
     const events = await pool.querySync(relays, {
       kinds: [30001],
@@ -50,11 +55,23 @@ async function fetchCurationList(pool: SimplePool, relays: string[], authorPubke
       '#d': [CURATION_LIST_D_TAG],
       limit: 1,
     })
-    if (events.length === 0) return []
+    if (events.length === 0) return { authors: [], pinnedArticles: [] }
     const latest = events.sort((a, b) => b.created_at - a.created_at)[0]
-    return latest.tags.filter(t => t[0] === 'p').map(t => t[1])
+    const authors = latest.tags.filter(t => t[0] === 'p').map(t => t[1])
+    // Parse 'a' tags: "30023:pubkey:identifier"
+    const pinnedArticles = latest.tags
+      .filter(t => t[0] === 'a')
+      .map(t => {
+        const parts = t[1].split(':')
+        if (parts.length >= 3) {
+          return { kind: parseInt(parts[0]), pubkey: parts[1], identifier: parts.slice(2).join(':') }
+        }
+        return null
+      })
+      .filter((a): a is { kind: number; pubkey: string; identifier: string } => a !== null)
+    return { authors, pinnedArticles }
   } catch {
-    return []
+    return { authors: [], pinnedArticles: [] }
   }
 }
 
@@ -272,8 +289,8 @@ export function Press() {
       try {
         // Fetch editor's curation list
         const relays = getPressRelays()
-        const curatedAuthors = await fetchCurationList(pool, relays, EDITOR_PUBKEY)
-        const authors = curatedAuthors.length > 0 ? curatedAuthors : FALLBACK_AUTHORS
+        const curationData = await fetchCurationList(pool, relays, EDITOR_PUBKEY)
+        const authors = curationData.authors.length > 0 ? curationData.authors : FALLBACK_AUTHORS
         setCuratedPubkeys(authors)
 
         // Fetch editor profile
@@ -281,12 +298,48 @@ export function Press() {
         setEditorProfile(ep)
 
         const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60
-        const [curatedEvents, recentEvents] = await Promise.all([
-          pool.querySync(relays, { kinds: [30023], authors, limit: 20 }),
+
+        // Fetch pinned articles specifically (by author+identifier)
+        const pinnedFetches = curationData.pinnedArticles.map(a =>
+          pool.querySync(relays, {
+            kinds: [30023],
+            authors: [a.pubkey],
+            '#d': [a.identifier],
+            limit: 1,
+          }).catch(() => [])
+        )
+
+        const [curatedEvents, recentEvents, ...pinnedResults] = await Promise.all([
+          pool.querySync(relays, { kinds: [30023], authors, limit: 30 }),
           pool.querySync(relays, { kinds: [30023], limit: 80, since: thirtyDaysAgo }),
+          ...pinnedFetches,
         ])
 
+        // Build pinned articles (in curation order) then fill with one-per-author
+        const pinnedEvents = pinnedResults.flat()
+        const pinnedArticles = eventsToArticles(pinnedEvents, true)
+        // Sort pinned articles in the order they appear in the curation list
+        const pinnedOrder = curationData.pinnedArticles.map(a => `${a.pubkey}:${a.identifier}`)
+        pinnedArticles.sort((a, b) => {
+          const aIdx = pinnedOrder.findIndex(key => key === `${a.pubkey}:${a.slug}`)
+          const bIdx = pinnedOrder.findIndex(key => key === `${b.pubkey}:${b.slug}`)
+          return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx)
+        })
+        const pinnedIds = new Set(pinnedArticles.map(a => a.id))
+
         const allArticles = processEvents(curatedEvents, recentEvents, authors)
+
+        // Editor's Picks: pinned first, then one-per-author round-robin (no author domination)
+        const unpinned = allArticles.curated.filter(a => !pinnedIds.has(a.id))
+        const onePerAuthor: PressArticle[] = []
+        const seenAuthors = new Set(pinnedArticles.map(a => a.pubkey))
+        for (const article of unpinned) {
+          if (!seenAuthors.has(article.pubkey)) {
+            seenAuthors.add(article.pubkey)
+            onePerAuthor.push(article)
+          }
+        }
+        allArticles.curated = [...pinnedArticles, ...onePerAuthor]
 
         // Count reactions for Fresh Off the Press — filter out zero-engagement spam
         const freshCandidates = allArticles.trending
