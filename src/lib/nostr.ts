@@ -18,6 +18,7 @@ export const DEFAULT_RELAYS = [
   'wss://nos.lol',
   'wss://relay.primal.net',
   'wss://relay.nostr.band',
+  'wss://relay.satsdisco.com',
 ]
 
 // Generate a URL-friendly slug from title
