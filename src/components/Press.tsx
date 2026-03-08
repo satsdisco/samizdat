@@ -726,7 +726,7 @@ export function Press() {
         ) : (
           <main className="press-content">
             {/* Editor's Picks */}
-            {curatedArticles.length > 0 && (
+            {(curatedArticles.length > 0 || isEditor) && (
               <section className="press-section">
                 <div className="press-section-header">
                   <h2 className="press-section-label">
@@ -981,7 +981,7 @@ export function Press() {
 
 // === HELPER FUNCTIONS ===
 
-function eventsToArticles(events: any[]): PressArticle[] {
+function eventsToArticles(events: any[], skipBotFilter = false): PressArticle[] {
   const seen = new Map<string, any>()
   for (const e of events) {
     const d = e.tags.find((t: string[]) => t[0] === 'd')?.[1] || ''
@@ -998,8 +998,11 @@ function eventsToArticles(events: any[]): PressArticle[] {
       if (!title || title.trim().length < 5 || title.toLowerCase() === 'untitled') return null
       if (e.content.length < 200) return null
       // Filter bot spam: if same author has >5 articles in this batch, likely a bot
-      const authorCount = events.filter((ev: any) => ev.pubkey === e.pubkey).length
-      if (authorCount > 5) return null
+      // Skip for curated authors — they were explicitly chosen by the editor
+      if (!skipBotFilter) {
+        const authorCount = events.filter((ev: any) => ev.pubkey === e.pubkey).length
+        if (authorCount > 5) return null
+      }
 
       const slug = getTag('d') || ''
       return {
@@ -1026,7 +1029,7 @@ function processEvents(
   recentEvents: any[],
   _curatedAuthors: string[]
 ): { curated: PressArticle[]; exclusive: PressArticle[]; trending: PressArticle[] } {
-  const curated = eventsToArticles(curatedEvents).slice(0, 8)
+  const curated = eventsToArticles(curatedEvents, true).slice(0, 12)
   const curatedIds = new Set(curated.map(a => a.id))
 
   const recent = eventsToArticles(recentEvents)
