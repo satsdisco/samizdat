@@ -103,7 +103,7 @@ function ArticleCard({ article, onBookmark }: { article: PressArticle; onBookmar
     <div className="press-card-wrap">
       <Link to={`/a/${article.naddr}`} className="press-card">
         <div className="press-card-thumb">
-          <img src={article.image || '/placeholder.svg'} alt="" loading="lazy" />
+          <img src={article.image || '/placeholder.jpg'} alt="" loading="lazy" />
         </div>
         <div className="press-card-text">
           <h3 className="press-card-title">{article.title}</h3>
