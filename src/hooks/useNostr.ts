@@ -59,6 +59,7 @@ interface NostrActions {
   loadArticles: () => Promise<void>
   clearPublishResult: () => void
   signEvent: (event: any) => Promise<any>
+  toggleRelay: (url: string, field: 'read' | 'write') => void
 }
 
 const STORAGE_KEY = 'samizdat_pubkey'
@@ -358,6 +359,12 @@ export function useNostr(): [NostrState, NostrActions] {
 
   const clearPublishResult = useCallback(() => setPublishResult(null), [])
 
+  const toggleRelay = useCallback((url: string, field: 'read' | 'write') => {
+    setRelays(prev => prev.map(r =>
+      r.url === url ? { ...r, [field]: !r[field] } : r
+    ))
+  }, [])
+
   const state: NostrState = {
     pubkey,
     npub,
@@ -382,6 +389,7 @@ export function useNostr(): [NostrState, NostrActions] {
     initiateQrLogin,
     logout: clearAuth,
     signEvent,
+    toggleRelay,
     publish,
     loadArticles,
     clearPublishResult,

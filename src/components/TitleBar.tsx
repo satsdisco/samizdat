@@ -1,3 +1,5 @@
+import { useState, useRef, useEffect } from 'react'
+import type { RelayInfo } from '../types/nostr'
 import './TitleBar.css'
 
 interface TitleBarProps {
@@ -14,6 +16,8 @@ interface TitleBarProps {
   onLogout: () => void
   isLoggingIn: boolean
   relayCount: number
+  relays: RelayInfo[]
+  onRelayToggle: (url: string, field: 'read' | 'write') => void
   onToggleSidebar: () => void
 }
 
@@ -30,9 +34,28 @@ export function TitleBar({
   onLogin,
   onLogout,
   isLoggingIn,
-  relayCount,
+  relays,
+  onRelayToggle,
   onToggleSidebar,
 }: TitleBarProps) {
+  const [showRelays, setShowRelays] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!showRelays) return
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowRelays(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showRelays])
+
+  const writeRelays = relays.filter(r => r.write)
+  const readRelays = relays.filter(r => r.read)
+
   return (
     <header className="titlebar">
       <div className="titlebar-left">
@@ -55,9 +78,56 @@ export function TitleBar({
       <div className="titlebar-right">
         {pubkey ? (
           <>
-            <div className="relay-status" title={`Connected to ${relayCount} relays`}>
-              <span className={`connection-dot ${isConnected ? 'connected' : ''}`} />
-              <span className="relay-count">{relayCount}</span>
+            <div className="relay-status-wrapper" ref={dropdownRef}>
+              <button
+                className="relay-status"
+                onClick={() => setShowRelays(!showRelays)}
+                title={`Publishing to ${writeRelays.length} relays`}
+              >
+                <span className={`connection-dot ${isConnected ? 'connected' : ''}`} />
+                <span className="relay-count">{writeRelays.length}</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`relay-chevron ${showRelays ? 'open' : ''}`}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              {showRelays && (
+                <div className="relay-dropdown">
+                  <div className="relay-dropdown-header">
+                    <span>Relays</span>
+                    <span className="relay-dropdown-sub">{writeRelays.length} write · {readRelays.length} read</span>
+                  </div>
+                  <div className="relay-dropdown-list">
+                    {relays.map(relay => {
+                      const host = relay.url.replace('wss://', '').replace('ws://', '').replace(/\/$/, '')
+                      return (
+                        <div key={relay.url} className="relay-row">
+                          <span className="relay-host" title={relay.url}>{host}</span>
+                          <div className="relay-toggles">
+                            <button
+                              className={`relay-toggle ${relay.read ? 'active' : ''}`}
+                              onClick={() => onRelayToggle(relay.url, 'read')}
+                              title="Read from this relay"
+                            >
+                              R
+                            </button>
+                            <button
+                              className={`relay-toggle ${relay.write ? 'active' : ''}`}
+                              onClick={() => onRelayToggle(relay.url, 'write')}
+                              title="Write to this relay"
+                            >
+                              W
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {relays.length === 0 && (
+                    <div className="relay-empty">No relays found. Using defaults.</div>
+                  )}
+                </div>
+              )}
             </div>
 
             <button

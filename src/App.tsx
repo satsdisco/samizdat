@@ -135,6 +135,8 @@ function App() {
         onLogout={actions.logout}
         isLoggingIn={nostr.isLoggingIn}
         relayCount={nostr.relays.length}
+        relays={nostr.relays}
+        onRelayToggle={actions.toggleRelay}
         onToggleSidebar={() => setShowSidebar(!showSidebar)}
       />
 
