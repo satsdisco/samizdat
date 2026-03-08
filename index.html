@@ -30,6 +30,25 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Handle stale chunk errors after deploys — auto-reload once
+      window.addEventListener('error', e => {
+        if (e.message && e.message.includes('dynamically imported module')) {
+          if (!sessionStorage.getItem('chunk_reload')) {
+            sessionStorage.setItem('chunk_reload', '1');
+            window.location.reload();
+          }
+        }
+      });
+      window.addEventListener('unhandledrejection', e => {
+        if (e.reason && String(e.reason).includes('dynamically imported module')) {
+          if (!sessionStorage.getItem('chunk_reload')) {
+            sessionStorage.setItem('chunk_reload', '1');
+            window.location.reload();
+          }
+        }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
