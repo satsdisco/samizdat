@@ -2,6 +2,7 @@
 
 import TurndownService from 'turndown'
 import MarkdownIt from 'markdown-it'
+import DOMPurify from 'dompurify'
 
 // HTML → Markdown (for publishing to nostr)
 const turndown = new TurndownService({
@@ -35,5 +36,19 @@ const md = new MarkdownIt({
 })
 
 export function markdownToHtml(markdown: string): string {
-  return md.render(markdown)
+  const raw = md.render(markdown)
+  return DOMPurify.sanitize(raw, {
+    ALLOWED_TAGS: [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'br', 'hr',
+      'ul', 'ol', 'li',
+      'blockquote', 'pre', 'code',
+      'a', 'img',
+      'strong', 'em', 'del', 's',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      'div', 'span', 'sup', 'sub',
+    ],
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'rel', 'width', 'height'],
+    ALLOW_DATA_ATTR: false,
+  })
 }
