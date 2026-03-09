@@ -11,7 +11,6 @@ interface LoginScreenProps {
   onQrLogin: () => Promise<{ uri: string; waitForConnection: () => Promise<void> } | null>
   isLoggingIn: boolean
   loginError: string | null
-  hasExtension: boolean
 }
 
 export function LoginScreen({
@@ -21,7 +20,6 @@ export function LoginScreen({
   onQrLogin,
   isLoggingIn,
   loginError,
-  hasExtension,
 }: LoginScreenProps) {
   const [view, setView] = useState<'main' | 'bunker' | 'nsec' | 'qr'>('main')
   const [bunkerInput, setBunkerInput] = useState('')
@@ -221,8 +219,34 @@ export function LoginScreen({
         {loginError && <div className="login-error">{loginError}</div>}
 
         <div className="login-methods">
+          {/* Nostr Connect — featured, works on mobile + desktop via window.nostr.js polyfill */}
           <button
             className="login-method-btn featured"
+            onClick={async () => {
+              // window.nostr.js polyfills window.nostr on mobile
+              // If extension/polyfill is available, use it directly
+              if (window.nostr) {
+                onExtensionLogin()
+              } else {
+                // Fallback: wait a moment for the polyfill to load
+                await new Promise(r => setTimeout(r, 500))
+                if (window.nostr) {
+                  onExtensionLogin()
+                } else {
+                  startQrFlow()
+                }
+              }
+            }}
+            disabled={isLoggingIn}
+          >
+            <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            {isLoggingIn ? 'Connecting…' : 'Log in with Nostr'}
+          </button>
+
+          <button
+            className="login-method-btn"
             onClick={startQrFlow}
             disabled={isLoggingIn}
           >
@@ -235,21 +259,8 @@ export function LoginScreen({
               <rect x="14" y="18" width="3" height="3" />
               <rect x="18" y="18" width="3" height="3" />
             </svg>
-            Log in with Mobile Signer
+            Scan QR / Remote Signer
           </button>
-
-          {hasExtension && (
-            <button
-              className="login-method-btn"
-              onClick={onExtensionLogin}
-              disabled={isLoggingIn}
-            >
-              <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-              {isLoggingIn ? 'Connecting…' : 'Log in with Extension'}
-            </button>
-          )}
 
           <button
             className="login-method-btn"

@@ -133,7 +133,7 @@ function App() {
             onQrLogin={actions.initiateQrLogin}
             isLoggingIn={nostr.isLoggingIn}
             loginError={nostr.loginError}
-            hasExtension={typeof window !== 'undefined' && !!window.nostr}
+
           />
         )
       }
