@@ -94,13 +94,19 @@ function App() {
 
   // Load an article into the editor
   const handleLoadArticle = useCallback((article: Article) => {
+    // Check if there's unsaved work and warn
+    const currentText = currentHtml.replace(/<[^>]*>/g, ' ').trim()
+    if (currentText.length > 50 && title) {
+      const confirmed = window.confirm(`You have unsaved changes in "${title}". Load "${article.title}" instead?`)
+      if (!confirmed) return
+    }
     setTitle(article.title)
     setCurrentSlug(article.slug)
     setCurrentPublishedAt(article.publishedAt)
     setBannerImage(article.image || '')
     editorRef.current?.loadMarkdown(article.content)
     setShowSidebar(false)
-  }, [])
+  }, [currentHtml, title])
 
   // New article
   const handleNewArticle = useCallback(() => {
