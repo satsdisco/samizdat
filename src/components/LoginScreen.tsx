@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { NstartModal } from 'nstart-modal'
 import './LoginScreen.css'
 
 export type LoginMethod = 'extension' | 'bunker' | 'nsec'
@@ -28,41 +27,21 @@ export function LoginScreen({
   const [qrUri, setQrUri] = useState<string | null>(null)
   const [qrWaiting, setQrWaiting] = useState(false)
   const abortRef = useRef(false)
-  const nstartRef = useRef<NstartModal | null>(null)
-
   const handleCreateAccount = useCallback(() => {
-    // Clean up previous instance
-    if (nstartRef.current) {
-      nstartRef.current.destroy()
-      nstartRef.current = null
-    }
-
-    nstartRef.current = new NstartModal({
-      baseUrl: 'https://nstart.me',
+    // Redirect to nstart.me — works everywhere (no iframe/CSP issues)
+    // User creates keys there and gets redirected back with #nostr-login=...
+    const params = new URLSearchParams({
       an: 'Samizdat',
-      aa: 'c0392b',     // Our accent red
+      at: 'web',
+      ac: window.location.origin,
+      aa: 'c0392b',
       am: 'dark',
-      aac: true,         // Don't return ncryptsec (we don't use it)
-      arr: ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://relay.nostr.band'],
-      awr: ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://relay.nostr.band'],
-      onComplete: (result) => {
-        const cred = result.nostrLogin
-        if (!cred) return
-
-        // nstart returns credentials in priority: bunker > nsec
-        if (cred.startsWith('bunker://')) {
-          onBunkerLogin(cred)
-        } else if (cred.startsWith('nsec1')) {
-          onNsecLogin(cred)
-        }
-      },
-      onCancel: () => {
-        // User closed the modal — nothing to do
-      },
+      aac: 'yes',
+      arr: 'wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net,wss://relay.nostr.band',
+      awr: 'wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net,wss://relay.nostr.band',
     })
-
-    nstartRef.current.open()
-  }, [onBunkerLogin, onNsecLogin])
+    window.location.href = `https://nstart.me?${params.toString()}`
+  }, [])
 
   const handleBunkerSubmit = () => {
     const input = bunkerInput.trim()
