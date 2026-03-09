@@ -42,6 +42,20 @@ function App() {
     localStorage.setItem('samizdat_draft_content', html)
   }, [])
 
+  // Handle nstart #nostr-login=... redirect (fallback for modal)
+  useEffect(() => {
+    if (window.location.hash && window.location.hash.startsWith('#nostr-login=')) {
+      const cred = decodeURIComponent(window.location.hash.replace('#nostr-login=', ''))
+      // Remove credentials from URL immediately (security)
+      history.replaceState(null, '', window.location.href.split('#')[0])
+      if (cred.startsWith('bunker://')) {
+        actions.loginWithBunker(cred)
+      } else if (cred.startsWith('nsec1')) {
+        actions.loginWithNsec(cred)
+      }
+    }
+  }, [])
+
   // Restore saved draft from localStorage
   useEffect(() => {
     const savedTitle = localStorage.getItem('samizdat_draft_title')
