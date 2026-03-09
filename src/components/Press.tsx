@@ -4,6 +4,7 @@ import { SimplePool } from 'nostr-tools'
 import { nip19 } from 'nostr-tools'
 import { DEFAULT_RELAYS, fetchProfile, publishToRelays } from '../lib/nostr'
 import { signEvent, canSign } from '../lib/signer'
+import { useLoadingMessage } from '../hooks/useLoadingMessage'
 import './Press.css'
 
 // Default editor — satsdisco's pubkey (site creator)
@@ -175,36 +176,7 @@ function ArticleCard({ article, onBookmark }: { article: PressArticle; onBookmar
   )
 }
 
-const LOADING_MESSAGES = [
-  'Tuning into relays…',
-  'Decentralization takes a sec…',
-  'Asking 4 relays nicely…',
-  'No servers to blame, just relays…',
-  'The underground press is warming up…',
-  'Fetching words that can\'t be censored…',
-  'Patience. Freedom isn\'t instant.',
-  'Relays are thinking about it…',
-  'This is what sovereignty feels like…',
-  'Gathering dispatches from the network…',
-  'The typewriters are still warm…',
-  'Negotiating with the decentralized gods…',
-  'Almost. The revolution will be relayed.',
-  'No CDN, no cache, just truth…',
-  'Your ISP can\'t see what we\'re loading…',
-]
-
-function useLoadingMessage() {
-  const [msg, setMsg] = useState(() =>
-    LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]
-  )
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMsg(LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)])
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
-  return msg
-}
+// Loading messages moved to shared hook: useLoadingMessage
 
 type TabView = 'press' | 'feed' | 'bookmarks'
 

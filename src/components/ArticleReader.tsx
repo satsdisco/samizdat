@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { markdownToHtml } from '../lib/markdown'
 import { fetchArticleByNaddr, fetchProfile, fetchComments, type ArticleData, type CommentData } from '../lib/reader'
 import { DEFAULT_RELAYS } from '../lib/nostr'
+import { useLoadingMessage } from '../hooks/useLoadingMessage'
 import './ArticleReader.css'
 
 function timeAgo(ts: number): string {
@@ -32,6 +33,7 @@ export function ArticleReader() {
   const [commentText, setCommentText] = useState('')
   const [isCommenting, setIsCommenting] = useState(false)
   const [unlocking, setUnlocking] = useState(false)
+  const loadingMsg = useLoadingMessage()
 
   useEffect(() => {
     if (!naddr) return
@@ -132,7 +134,7 @@ export function ArticleReader() {
       <div className="reader-page">
         <div className="reader-loading">
           <div className="reader-loading-pulse" />
-          <span>Fetching from relays…</span>
+          <span>{loadingMsg}</span>
         </div>
       </div>
     )
