@@ -175,7 +175,7 @@ export function useNostr(): [NostrState, NostrActions] {
   // The widget may have connected while the tab was backgrounded
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible' && isLoggingIn && !pubkey && window.nostr) {
+      if (document.visibilityState === 'visible' && !pubkey && window.nostr) {
         try {
           const pk = await window.nostr.getPublicKey()
           if (pk) {
@@ -190,7 +190,49 @@ export function useNostr(): [NostrState, NostrActions] {
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [isLoggingIn, pubkey])
+  }, [pubkey])
+
+  // Detect widget's stored bunker data and do the connection ourselves (Inkwell-style)
+  // The widget stores bunker info but stalls on reconnect — we actively call connect()
+  useEffect(() => {
+    const tryWidgetBunker = async () => {
+      if (pubkey) return // already logged in
+
+      const bunkerRaw = localStorage.getItem('wnj:bunkerPointer')
+      const clientSecretHex = localStorage.getItem('wnj:clientSecret')
+      if (!bunkerRaw || !clientSecretHex) return
+
+      try {
+        const bunker = JSON.parse(bunkerRaw)
+        if (!bunker.pubkey || !bunker.relays?.length) return
+
+        setIsLoggingIn(true)
+        setLoginError(null)
+
+        const { BunkerSigner } = await import('nostr-tools/nip46')
+        // Convert hex to Uint8Array
+        const clientSk = new Uint8Array(clientSecretHex.match(/.{1,2}/g)!.map((b: string) => parseInt(b, 16)))
+
+        // Build bunker URI and use fromURI with long timeout
+        const bunkerUri = `bunker://${bunker.pubkey}?${bunker.relays.map((r: string) => `relay=${encodeURIComponent(r)}`).join('&')}${bunker.secret ? `&secret=${bunker.secret}` : ''}`
+
+        const signer = await BunkerSigner.fromURI(clientSk, bunkerUri, {}, 60000)
+        const pk = await signer.getPublicKey()
+        bunkerSignerRef.current = signer
+        saveAuth(pk, 'bunker')
+        await fetchUserData(pk)
+      } catch (e: any) {
+        console.log('Widget bunker reconnect failed:', e.message)
+        // Don't show error — user can still use the widget or other methods
+      } finally {
+        setIsLoggingIn(false)
+      }
+    }
+
+    // Try after a short delay to let the widget initialize
+    const timer = setTimeout(tryWidgetBunker, 2000)
+    return () => clearTimeout(timer)
+  }, [pubkey])
 
   // Login with NIP-46 remote signer (bunker:// URL or nip05)
   const loginWithBunker = useCallback(async (bunkerInput: string) => {
