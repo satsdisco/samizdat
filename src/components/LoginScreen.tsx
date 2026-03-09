@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import './LoginScreen.css'
 
@@ -37,7 +37,6 @@ export function LoginScreen({
   const handleNsecSubmit = () => {
     const input = nsecInput.trim()
     if (!input) return
-    // Clear the input immediately — don't keep the key in DOM state longer than needed
     setNsecInput('')
     onNsecLogin(input)
   }
@@ -51,12 +50,10 @@ export function LoginScreen({
     try {
       const result = await onQrLogin()
       if (!result || abortRef.current) return
-
       setQrUri(result.uri)
-      // Wait for the signer to connect
       await result.waitForConnection()
     } catch {
-      // Error will be shown via loginError
+      // Error shown via loginError
     } finally {
       setQrWaiting(false)
     }
@@ -68,6 +65,20 @@ export function LoginScreen({
     setQrWaiting(false)
     setView('main')
   }
+
+  const handleCreateAccount = useCallback(() => {
+    const params = new URLSearchParams({
+      an: 'Samizdat',
+      at: 'web',
+      ac: window.location.origin,
+      aa: 'c0392b',
+      am: 'dark',
+      aac: 'yes',
+      arr: 'wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net,wss://relay.nostr.band',
+      awr: 'wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net,wss://relay.nostr.band',
+    })
+    window.location.href = `https://nstart.me?${params.toString()}`
+  }, [])
 
   // QR code scan view
   if (view === 'qr') {
@@ -97,7 +108,6 @@ export function LoginScreen({
                   Waiting for signer…
                 </div>
 
-                {/* On mobile, offer a direct deep link to open signer app */}
                 {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
                   <a
                     href={qrUri}
@@ -275,10 +285,21 @@ export function LoginScreen({
           </button>
         </div>
 
-        <p className="login-footer">
-          New to nostr?{' '}
-          <a href="https://nostr.how" target="_blank" rel="noopener noreferrer">Learn more</a>
-        </p>
+        <div className="login-create-section">
+          <div className="login-divider">
+            <span>new to nostr?</span>
+          </div>
+          <button
+            className="login-create-btn"
+            onClick={handleCreateAccount}
+            disabled={isLoggingIn}
+          >
+            Create an Account
+          </button>
+          <p className="login-footer">
+            <a href="https://nostr.how" target="_blank" rel="noopener noreferrer">What is nostr?</a>
+          </p>
+        </div>
       </div>
     </div>
   )

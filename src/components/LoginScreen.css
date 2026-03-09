@@ -361,16 +361,52 @@
 }
 
 /* Footer */
+.login-create-section {
+  margin-top: 0.5rem;
+}
+
+.login-create-btn {
+  width: 100%;
+  padding: 0.75rem 1.2rem;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.01em;
+}
+
+.login-create-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.login-create-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .login-footer {
   font-family: var(--font-ui);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-faint);
+  text-align: center;
+  margin-top: 0.6rem;
 }
 
 .login-footer a {
-  color: var(--accent);
+  color: var(--text-faint);
   text-decoration: underline;
   text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+
+.login-footer a:hover {
+  color: var(--accent);
 }
 
 /* Mobile */
