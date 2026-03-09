@@ -219,24 +219,10 @@ export function LoginScreen({
         {loginError && <div className="login-error">{loginError}</div>}
 
         <div className="login-methods">
-          {/* Nostr Connect — featured, works on mobile + desktop via window.nostr.js polyfill */}
+          {/* Log in with Nostr — uses window.nostr (extension or window.nostr.js polyfill) */}
           <button
             className="login-method-btn featured"
-            onClick={async () => {
-              // window.nostr.js polyfills window.nostr on mobile
-              // If extension/polyfill is available, use it directly
-              if (window.nostr) {
-                onExtensionLogin()
-              } else {
-                // Fallback: wait a moment for the polyfill to load
-                await new Promise(r => setTimeout(r, 500))
-                if (window.nostr) {
-                  onExtensionLogin()
-                } else {
-                  startQrFlow()
-                }
-              }
-            }}
+            onClick={onExtensionLogin}
             disabled={isLoggingIn}
           >
             <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

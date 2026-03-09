@@ -137,10 +137,18 @@ export function useNostr(): [NostrState, NostrActions] {
     setLoginError(null)
     try {
       const pk = await window.nostr.getPublicKey()
-      saveAuth(pk, 'extension')
-      await fetchUserData(pk)
+      if (pk) {
+        saveAuth(pk, 'extension')
+        await fetchUserData(pk)
+      }
     } catch (e: any) {
-      setLoginError(e.message || 'Extension login failed')
+      // Don't show error if user just closed the widget/cancelled
+      const msg = e.message || ''
+      if (msg.includes('cancelled') || msg.includes('closed') || msg.includes('denied') || msg === '') {
+        // User cancelled — silently reset
+      } else {
+        setLoginError(msg || 'Login failed — try "Log in with Key" instead')
+      }
     } finally {
       setIsLoggingIn(false)
     }
