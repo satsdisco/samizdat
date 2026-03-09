@@ -132,7 +132,7 @@ export function useNostr(): [NostrState, NostrActions] {
     setProfile(prof)
   }
 
-  // Login with NIP-07 browser extension
+  // Login with NIP-07 browser extension (or window.nostr.js widget polyfill)
   const loginWithExtension = useCallback(async () => {
     if (!window.nostr) {
       setLoginError('No nostr extension found. Install Alby or nos2x.')
@@ -141,23 +141,56 @@ export function useNostr(): [NostrState, NostrActions] {
     setIsLoggingIn(true)
     setLoginError(null)
     try {
+      // First attempt: direct getPublicKey call
+      // With the widget, this opens the widget UI and waits for user to connect
       const pk = await window.nostr.getPublicKey()
       if (pk) {
         saveAuth(pk, 'extension')
         await fetchUserData(pk)
       }
     } catch (e: any) {
-      // Don't show error if user just closed the widget/cancelled
       const msg = e.message || ''
       if (msg.includes('cancelled') || msg.includes('closed') || msg.includes('denied') || msg === '') {
         // User cancelled — silently reset
       } else {
+        // Widget might have connected but promise errored — try again
+        try {
+          const pk = await window.nostr.getPublicKey()
+          if (pk) {
+            saveAuth(pk, 'extension')
+            await fetchUserData(pk)
+            return
+          }
+        } catch {
+          // Actually failed
+        }
         setLoginError(msg || 'Login failed — try "Log in with Key" instead')
       }
     } finally {
       setIsLoggingIn(false)
     }
   }, [])
+
+  // When user switches back from signer app, retry getPublicKey
+  // The widget may have connected while the tab was backgrounded
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && isLoggingIn && !pubkey && window.nostr) {
+        try {
+          const pk = await window.nostr.getPublicKey()
+          if (pk) {
+            saveAuth(pk, 'extension')
+            await fetchUserData(pk)
+            setIsLoggingIn(false)
+          }
+        } catch {
+          // Widget not ready yet — that's ok, user can retry
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [isLoggingIn, pubkey])
 
   // Login with NIP-46 remote signer (bunker:// URL or nip05)
   const loginWithBunker = useCallback(async (bunkerInput: string) => {
