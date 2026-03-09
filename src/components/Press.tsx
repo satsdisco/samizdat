@@ -221,6 +221,23 @@ export function Press() {
   const [curatedPubkeys, setCuratedPubkeys] = useState<string[]>([])
   const [curatedProfiles, setCuratedProfiles] = useState<Map<string, Profile>>(new Map())
 
+  // Fetch profiles for curated authors when panel opens
+  useEffect(() => {
+    if (!showCurate || curatedPubkeys.length === 0) return
+    const missing = curatedPubkeys.filter(pk => !curatedProfiles.has(pk))
+    if (missing.length === 0) return
+    const relays = getPressRelays()
+    Promise.all(missing.map(pk =>
+      fetchProfile(pk, relays).then(p => [pk, p] as const).catch(() => [pk, null] as const)
+    )).then(results => {
+      setCuratedProfiles(prev => {
+        const next = new Map(prev)
+        for (const [pk, p] of results) { if (p) next.set(pk, p) }
+        return next
+      })
+    })
+  }, [showCurate, curatedPubkeys])
+
   const loadingMsg = useLoadingMessage()
 
   // Check login on mount
@@ -759,34 +776,51 @@ export function Press() {
 
                 {showCurate && (
                   <div className="press-curate-panel">
-                    <p className="press-curate-desc">
-                      Add or remove authors. Changes are published as a NIP-51 list to your relays.
-                    </p>
-                    <div className="press-curate-authors">
-                      {curatedPubkeys.map(pk => (
-                        <div key={pk} className="press-curate-author">
-                          {curatedProfiles.get(pk)?.picture && (
-                            <img src={curatedProfiles.get(pk)!.picture} alt="" className="press-curate-avatar" />
-                          )}
-                          <span className="press-curate-author-name">
-                            {curatedProfiles.get(pk)?.name || pk.slice(0, 16) + '…'}
-                          </span>
-                          <button className="press-curate-remove" onClick={() => handleRemoveAuthor(pk)}>×</button>
-                        </div>
-                      ))}
+                    <div className="press-curate-section">
+                      <span className="press-curate-section-label">Curated Authors</span>
+                      <div className="press-curate-authors">
+                        {curatedPubkeys.map(pk => {
+                          const profile = curatedProfiles.get(pk)
+                          return (
+                            <div key={pk} className="press-curate-author-card">
+                              <div className="press-curate-author-info">
+                                {profile?.picture ? (
+                                  <img src={profile.picture} alt="" className="press-curate-avatar" />
+                                ) : (
+                                  <div className="press-curate-avatar-placeholder" />
+                                )}
+                                <div className="press-curate-author-meta">
+                                  <span className="press-curate-author-name">
+                                    {profile?.name || 'Loading…'}
+                                  </span>
+                                  {profile?.nip05 && (
+                                    <span className="press-curate-author-nip05">{profile.nip05}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <button className="press-curate-remove" onClick={() => handleRemoveAuthor(pk)} title="Remove author">×</button>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                    {/* Pinned articles */}
+
                     {curatedArticleAddrs.length > 0 && (
-                      <div className="press-curate-articles">
-                        <span className="press-curate-articles-label">Pinned articles:</span>
-                        {curatedArticleAddrs.map(a => (
-                          <div key={a.naddr} className="press-curate-author">
-                            <span className="press-curate-author-name">{a.identifier.replace(/-/g, ' ')}</span>
-                            <button className="press-curate-remove" onClick={() => handleRemoveArticle(a.naddr)}>×</button>
-                          </div>
-                        ))}
+                      <div className="press-curate-section">
+                        <span className="press-curate-section-label">Pinned Articles</span>
+                        <div className="press-curate-articles-list">
+                          {curatedArticleAddrs.map(a => (
+                            <div key={a.naddr} className="press-curate-article-card">
+                              <span className="press-curate-article-title">
+                                📌 {a.identifier.replace(/-/g, ' ')}
+                              </span>
+                              <button className="press-curate-remove" onClick={() => handleRemoveArticle(a.naddr)} title="Unpin article">×</button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
+
                     <div className="press-curate-add">
                       <input
                         type="text"
