@@ -197,13 +197,17 @@ export async function publishToRelays(event: NostrEvent, relayUrls: string[]): P
 // Fetch user's articles from relays
 export async function fetchArticles(pubkey: string, relayUrls: string[], drafts = false): Promise<Article[]> {
   const kind = drafts ? KIND_DRAFT : KIND_ARTICLE
-  const articles: Article[] = []
   const seen = new Set<string>()
+  const articles: Article[] = []
 
-  for (const url of relayUrls) {
+  // Query all relays in parallel for speed
+  const fetchFromRelay = async (url: string): Promise<NostrEvent[]> => {
     let relay: Relay | null = null
     try {
-      relay = await Relay.connect(url)
+      relay = await Promise.race([
+        Relay.connect(url),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      ]) as Relay
 
       const events = await new Promise<NostrEvent[]>((resolve) => {
         const collected: NostrEvent[] = []
@@ -219,40 +223,45 @@ export async function fetchArticles(pubkey: string, relayUrls: string[], drafts 
             },
           }
         )
-        setTimeout(() => { sub.close(); resolve(collected) }, 8000)
+        setTimeout(() => { sub.close(); resolve(collected) }, 6000)
       })
 
-      for (const event of events) {
-        const dTag = event.tags.find(t => t[0] === 'd')?.[1]
-        if (!dTag || seen.has(dTag)) continue
-        seen.add(dTag)
-
-        const title = event.tags.find(t => t[0] === 'title')?.[1] || 'Untitled'
-        const summary = event.tags.find(t => t[0] === 'summary')?.[1]
-        const image = event.tags.find(t => t[0] === 'image')?.[1]
-        const publishedAt = event.tags.find(t => t[0] === 'published_at')?.[1]
-        const hashtags = event.tags.filter(t => t[0] === 't').map(t => t[1])
-
-        articles.push({
-          id: event.id,
-          pubkey: event.pubkey,
-          slug: dTag,
-          title,
-          content: event.content,
-          summary,
-          image,
-          tags: hashtags,
-          publishedAt: publishedAt ? parseInt(publishedAt) : undefined,
-          createdAt: event.created_at,
-          isDraft: drafts,
-        })
-      }
-
       relay.close()
-      if (articles.length > 0) break // Got articles from one relay, good enough
+      return events
     } catch {
-      relay?.close()
-      continue
+      if (relay) try { relay.close() } catch { /* ignore */ }
+      return []
+    }
+  }
+
+  const results = await Promise.allSettled(relayUrls.map(fetchFromRelay))
+
+  for (const result of results) {
+    if (result.status !== 'fulfilled') continue
+    for (const event of result.value) {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1]
+      if (!dTag || seen.has(dTag)) continue
+      seen.add(dTag)
+
+      const title = event.tags.find(t => t[0] === 'title')?.[1] || 'Untitled'
+      const summary = event.tags.find(t => t[0] === 'summary')?.[1]
+      const image = event.tags.find(t => t[0] === 'image')?.[1]
+      const publishedAt = event.tags.find(t => t[0] === 'published_at')?.[1]
+      const hashtags = event.tags.filter(t => t[0] === 't').map(t => t[1])
+
+      articles.push({
+        id: event.id,
+        pubkey: event.pubkey,
+        slug: dTag,
+        title,
+        content: event.content,
+        summary,
+        image,
+        tags: hashtags,
+        publishedAt: publishedAt ? parseInt(publishedAt) : undefined,
+        createdAt: event.created_at,
+        isDraft: drafts,
+      })
     }
   }
 
