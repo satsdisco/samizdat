@@ -84,13 +84,21 @@ function App() {
     })
   }, [title, currentHtml, currentSlug, currentPublishedAt, bannerImage, actions])
 
-  // Save draft
+  // Save draft — always saves to localStorage, attempts relay publish if possible
   const handleSaveDraft = useCallback(() => {
+    // Always save locally first — this never fails
+    localStorage.setItem('samizdat_draft_title', title)
+    localStorage.setItem('samizdat_draft_content', currentHtml)
+    if (bannerImage) localStorage.setItem('samizdat_draft_banner', bannerImage)
+
+    // Try to publish to relays too (may fail if session expired)
     actions.publish(title, currentHtml, {
       slug: currentSlug,
       isDraft: true,
+    }).catch?.(() => {
+      // Relay publish failed but local save succeeded — that's ok
     })
-  }, [title, currentHtml, currentSlug, actions])
+  }, [title, currentHtml, currentSlug, bannerImage, actions])
 
   // Load an article into the editor
   const handleLoadArticle = useCallback((article: Article) => {
