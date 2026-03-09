@@ -93,6 +93,22 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
+@media (max-width: 640px) {
+  .toast {
+    left: 1rem;
+    right: 1rem;
+    transform: none;
+    max-width: none;
+    font-size: 0.8rem;
+    bottom: 1rem;
+  }
+
+  .toast-link-row {
+    padding-left: 0;
+    flex-wrap: wrap;
+  }
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;
