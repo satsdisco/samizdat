@@ -39,7 +39,9 @@ export async function fetchArticleByNaddr(naddrStr: string): Promise<ArticleData
   }
 
   const pool = new SimplePool()
-  const relays = decoded.relays?.length ? decoded.relays : DEFAULT_RELAYS
+  // Always try both naddr hint relays AND default relays — article may only be on some
+  const hintRelays = decoded.relays || []
+  const relays = [...new Set([...hintRelays, ...DEFAULT_RELAYS])]
 
   try {
     // Add timeout to prevent hanging on dead relays
