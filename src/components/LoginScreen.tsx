@@ -231,48 +231,30 @@ export function LoginScreen({
         {loginError && <div className="login-error">{loginError}</div>}
 
         <div className="login-methods">
-          {/* Mobile: QR flow with callback is featured (reliable with Primal) */}
-          {/* Desktop: Extension is featured */}
-          {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? (
+          {/* Log in with Nostr — QR/callback flow, works on mobile + desktop */}
+          <button
+            className="login-method-btn featured"
+            onClick={startQrFlow}
+            disabled={isLoggingIn}
+          >
+            <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            {isLoggingIn ? 'Connecting…' : 'Log in with Nostr'}
+          </button>
+
+          {/* Extension — only if NIP-07 extension available */}
+          {typeof window !== 'undefined' && !!window.nostr && (
             <button
-              className="login-method-btn featured"
-              onClick={startQrFlow}
+              className="login-method-btn"
+              onClick={onExtensionLogin}
               disabled={isLoggingIn}
             >
               <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
-              {isLoggingIn ? 'Connecting…' : 'Log in with Nostr'}
+              Log in with Extension
             </button>
-          ) : (
-            <>
-              <button
-                className="login-method-btn featured"
-                onClick={onExtensionLogin}
-                disabled={isLoggingIn}
-              >
-                <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                {isLoggingIn ? 'Connecting…' : 'Log in with Extension'}
-              </button>
-              <button
-                className="login-method-btn"
-                onClick={startQrFlow}
-                disabled={isLoggingIn}
-              >
-                <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" />
-                  <rect x="14" y="14" width="3" height="3" />
-                  <rect x="18" y="14" width="3" height="3" />
-                  <rect x="14" y="18" width="3" height="3" />
-                  <rect x="18" y="18" width="3" height="3" />
-                </svg>
-                Scan QR / Remote Signer
-              </button>
-            </>
           )}
 
           <button
