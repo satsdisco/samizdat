@@ -116,6 +116,11 @@ export function useNostr(): [NostrState, NostrActions] {
     }
     localStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(AUTH_METHOD_KEY)
+    // Clear window.nostr.js widget state so re-login gets a fresh QR/session
+    localStorage.removeItem('wnj:bunkerPointer')
+    localStorage.removeItem('wnj:clientSecret')
+    // Reload to fully reset the widget's in-memory NIP-46 connection
+    window.location.reload()
   }
 
   const fetchUserData = async (pk: string) => {
@@ -222,8 +227,8 @@ export function useNostr(): [NostrState, NostrActions] {
       const clientSk = generateSecretKey()
       const clientPk = getPublicKey(clientSk)
 
-      // NIP-46 handshake relays — nsec.app is purpose-built for this
-      const connectRelays = ['wss://relay.nsec.app', 'wss://relay.damus.io']
+      // NIP-46 handshake relays — nsec.app is purpose-built for this, primal.net for Primal iOS
+      const connectRelays = ['wss://relay.nsec.app', 'wss://relay.primal.net', 'wss://nos.lol', 'wss://relay.damus.io']
       const secret = Math.random().toString(36).slice(2, 10)
 
       let uri = createNostrConnectURI({

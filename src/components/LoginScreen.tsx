@@ -96,6 +96,18 @@ export function LoginScreen({
                   <span className="qr-pulse" />
                   Waiting for signer…
                 </div>
+
+                {/* On mobile, offer a direct deep link to open signer app */}
+                {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+                  <a
+                    href={qrUri}
+                    className="login-method-btn featured"
+                    style={{ textDecoration: 'none', textAlign: 'center', marginTop: '0.5rem', display: 'block' }}
+                  >
+                    Open in Signer App
+                  </a>
+                )}
+
                 <button
                   className="qr-copy-btn"
                   onClick={() => navigator.clipboard.writeText(qrUri)}
@@ -219,20 +231,9 @@ export function LoginScreen({
         {loginError && <div className="login-error">{loginError}</div>}
 
         <div className="login-methods">
-          {/* Log in with Nostr — uses window.nostr (extension or window.nostr.js polyfill) */}
+          {/* Mobile signer / QR — featured because it's the best mobile flow */}
           <button
             className="login-method-btn featured"
-            onClick={onExtensionLogin}
-            disabled={isLoggingIn}
-          >
-            <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            {isLoggingIn ? 'Connecting…' : 'Log in with Nostr'}
-          </button>
-
-          <button
-            className="login-method-btn"
             onClick={startQrFlow}
             disabled={isLoggingIn}
           >
@@ -245,8 +246,22 @@ export function LoginScreen({
               <rect x="14" y="18" width="3" height="3" />
               <rect x="18" y="18" width="3" height="3" />
             </svg>
-            Scan QR / Remote Signer
+            {isLoggingIn ? 'Connecting…' : 'Log in with Mobile Signer'}
           </button>
+
+          {/* Extension — only show if NIP-07 extension is actually installed */}
+          {typeof window !== 'undefined' && !!window.nostr && (
+            <button
+              className="login-method-btn"
+              onClick={onExtensionLogin}
+              disabled={isLoggingIn}
+            >
+              <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              Log in with Extension
+            </button>
+          )}
 
           <button
             className="login-method-btn"
