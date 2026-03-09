@@ -435,9 +435,9 @@ export function useNostr(): [NostrState, NostrActions] {
         const signedPreview = await signEvent(previewEvent)
         const signedFull = await signEvent(event)
 
-        // Publish preview to public relays
+        // Publish preview to user's write relays + default relays for maximum reach
         const writeRelays = relays.filter(r => r.write).map(r => r.url)
-        const publicRelays = writeRelays.length > 0 ? writeRelays : DEFAULT_RELAYS
+        const publicRelays = [...new Set([...writeRelays, ...DEFAULT_RELAYS])]
         const publicResults = await publishToRelays(signedPreview, publicRelays)
 
         // Publish full to private Samizdat relay
@@ -473,25 +473,36 @@ export function useNostr(): [NostrState, NostrActions] {
 
       const signed = await signEvent(event)
 
+      // Always publish to user's write relays AND default relays for maximum reach
       const writeRelays = relays.filter(r => r.write).map(r => r.url)
-      const targetRelays = writeRelays.length > 0 ? writeRelays : DEFAULT_RELAYS
+      const targetRelays = [...new Set([...writeRelays, ...DEFAULT_RELAYS])]
 
       const results = await publishToRelays(signed, targetRelays)
       const successful = results.filter(r => r.ok)
 
       if (successful.length > 0) {
         const { nip19 } = await import('nostr-tools')
+        // Use successful relays for naddr hints (prefer well-known ones)
+        const successUrls = successful.map(r => r.url)
+        const preferredOrder = DEFAULT_RELAYS.filter(r => successUrls.includes(r))
+        const naddrRelays = preferredOrder.length > 0
+          ? preferredOrder.slice(0, 2)
+          : successUrls.slice(0, 2)
         const naddr = options.isDraft ? undefined : nip19.naddrEncode({
           kind: 30023,
           pubkey: pubkey!,
           identifier: slug,
-          relays: targetRelays.slice(0, 2),
+          relays: naddrRelays,
         })
+        const failed = results.filter(r => !r.ok)
+        const failedNote = failed.length > 0
+          ? ` (failed: ${failed.map(r => r.url.replace('wss://', '')).join(', ')})`
+          : ''
         setPublishResult({
           success: true,
-          message: `Published to ${successful.length}/${results.length} relays`,
+          message: `Published to ${successful.length}/${results.length} relays${failedNote}`,
           naddr,
-          relays: successful.map(r => r.url),
+          relays: successUrls,
         })
       } else {
         setPublishResult({
@@ -568,7 +579,7 @@ export function useNostr(): [NostrState, NostrActions] {
       const signed = await signEvent(event)
 
       const writeRelays = relays.filter(r => r.write).map(r => r.url)
-      const targetRelays = writeRelays.length > 0 ? writeRelays : DEFAULT_RELAYS
+      const targetRelays = [...new Set([...writeRelays, ...DEFAULT_RELAYS])]
       await publishToRelays(signed, targetRelays)
 
       // Remove from local state
