@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import './LoginScreen.css'
 
@@ -27,10 +27,24 @@ export function LoginScreen({
   const [qrUri, setQrUri] = useState<string | null>(null)
   const [qrWaiting, setQrWaiting] = useState(false)
   const abortRef = useRef(false)
-  const handleCreateAccount = useCallback(() => {
-    // Redirect to nstart.me — works everywhere (no iframe/CSP issues)
-    // User creates keys there and gets redirected back with #nostr-login=...
-    const params = new URLSearchParams({
+  const [showNstart, setShowNstart] = useState(false)
+  const [nstartLoaded, setNstartLoaded] = useState(false)
+  const [nstartError, setNstartError] = useState(false)
+
+  const nstartParams = new URLSearchParams({
+    an: 'Samizdat',
+    at: 'modal',
+    ac: 'modal',
+    aa: 'c0392b',
+    am: 'dark',
+    aac: 'yes',
+    arr: 'wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net,wss://relay.nostr.band',
+    awr: 'wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net,wss://relay.nostr.band',
+  })
+  const nstartUrl = `https://nstart.me?${nstartParams.toString()}`
+
+  const nstartRedirectUrl = (() => {
+    const p = new URLSearchParams({
       an: 'Samizdat',
       at: 'web',
       ac: window.location.origin,
@@ -40,7 +54,42 @@ export function LoginScreen({
       arr: 'wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net,wss://relay.nostr.band',
       awr: 'wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net,wss://relay.nostr.band',
     })
-    window.location.href = `https://nstart.me?${params.toString()}`
+    return `https://nstart.me?${p.toString()}`
+  })()
+
+  // Listen for nstart postMessage completion
+  useEffect(() => {
+    if (!showNstart) return
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== 'https://nstart.me') return
+      if (event.data?.type === 'WIZARD_COMPLETE') {
+        const cred = event.data.result?.nostrLogin
+        if (cred) {
+          setShowNstart(false)
+          if (cred.startsWith('bunker://')) onBunkerLogin(cred)
+          else if (cred.startsWith('nsec1')) onNsecLogin(cred)
+        }
+      } else if (event.data?.type === 'WIZARD_CANCEL') {
+        setShowNstart(false)
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [showNstart, onBunkerLogin, onNsecLogin])
+
+  // Detect if iframe failed to load (timeout)
+  useEffect(() => {
+    if (!showNstart) return
+    setNstartLoaded(false)
+    setNstartError(false)
+    const timeout = setTimeout(() => {
+      if (!nstartLoaded) setNstartError(true)
+    }, 5000)
+    return () => clearTimeout(timeout)
+  }, [showNstart])
+
+  const handleCreateAccount = useCallback(() => {
+    setShowNstart(true)
   }, [])
 
   const handleBunkerSubmit = () => {
@@ -82,6 +131,43 @@ export function LoginScreen({
     setQrUri(null)
     setQrWaiting(false)
     setView('main')
+  }
+
+  // nstart onboarding overlay
+  if (showNstart) {
+    return (
+      <div className="login-overlay">
+        <div className="nstart-container">
+          <div className="nstart-header">
+            <h2>Create Your Nostr Identity</h2>
+            <button className="nstart-close" onClick={() => setShowNstart(false)}>×</button>
+          </div>
+          <div className="nstart-iframe-wrap">
+            <iframe
+              src={nstartUrl}
+              className="nstart-iframe"
+              onLoad={() => setNstartLoaded(true)}
+              allow="clipboard-write"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-top-navigation"
+            />
+            {!nstartLoaded && !nstartError && (
+              <div className="nstart-loading">Loading onboarding wizard…</div>
+            )}
+          </div>
+          {nstartError && (
+            <div className="nstart-fallback">
+              <p>Wizard blocked by your browser?</p>
+              <a href={nstartRedirectUrl} className="nstart-fallback-link">
+                Open nstart.me in a new tab →
+              </a>
+            </div>
+          )}
+          <button className="nstart-back" onClick={() => setShowNstart(false)}>
+            ‹ Back to login
+          </button>
+        </div>
+      </div>
+    )
   }
 
   // QR code scan view

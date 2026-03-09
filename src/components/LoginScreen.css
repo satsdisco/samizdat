@@ -409,6 +409,128 @@
   color: var(--accent);
 }
 
+/* nstart onboarding */
+.nstart-container {
+  width: 100%;
+  max-width: 520px;
+  height: 85vh;
+  max-height: 720px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border, #2a2a2a);
+}
+
+.nstart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border, #2a2a2a);
+  flex-shrink: 0;
+}
+
+.nstart-header h2 {
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.nstart-close {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: color 0.15s;
+  line-height: 1;
+}
+
+.nstart-close:hover {
+  color: var(--accent);
+}
+
+.nstart-iframe-wrap {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.nstart-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+}
+
+.nstart-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--text-faint);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.nstart-fallback {
+  padding: 0.6rem 1rem;
+  text-align: center;
+  border-top: 1px solid var(--border, #2a2a2a);
+  flex-shrink: 0;
+}
+
+.nstart-fallback p {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  margin: 0 0 0.3rem;
+}
+
+.nstart-fallback-link {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.nstart-back {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border, #2a2a2a);
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  text-align: center;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+.nstart-back:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .nstart-container {
+    max-width: 100%;
+    height: 100vh;
+    max-height: none;
+    border-radius: 0;
+    border: none;
+  }
+}
+
 /* Mobile */
 @media (max-width: 640px) {
   .login-screen {
