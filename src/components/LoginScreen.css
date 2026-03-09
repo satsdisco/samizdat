@@ -403,9 +403,27 @@
   }
 
   .login-input,
-  .login-field input {
+  .login-field input,
+  .input-with-icon input {
     min-height: 44px;
-    font-size: 1rem;
+    font-size: 16px !important; /* prevents iOS auto-zoom on focus */
+    padding: 0.8rem 0;
+    -webkit-appearance: none;
+  }
+
+  .input-with-icon {
+    padding: 0 0.8rem;
+    min-height: 48px;
+  }
+
+  .inline-connect-btn {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .login-field.compact {
+    flex-direction: column;
   }
 
   .qr-container canvas,
