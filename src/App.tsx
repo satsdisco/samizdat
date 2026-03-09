@@ -10,6 +10,7 @@ import { Toast } from './components/Toast'
 import { Preview } from './components/Preview'
 import { LoginScreen } from './components/LoginScreen'
 import { Landing } from './components/Landing'
+import { AuthCallback } from './components/AuthCallback'
 import { useNostr } from './hooks/useNostr'
 import type { Article } from './types/nostr'
 import './styles/theme.css'
@@ -222,6 +223,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/a/:naddr" element={<ArticleReader />} />
         <Route path="/read" element={<Press />} />
         <Route path="*" element={editorView()} />

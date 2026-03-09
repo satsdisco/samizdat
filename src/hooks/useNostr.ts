@@ -226,7 +226,7 @@ export function useNostr(): [NostrState, NostrActions] {
       const connectRelays = ['wss://relay.nsec.app', 'wss://relay.damus.io']
       const secret = Math.random().toString(36).slice(2, 10)
 
-      const uri = createNostrConnectURI({
+      let uri = createNostrConnectURI({
         clientPubkey: clientPk,
         relays: connectRelays,
         secret,
@@ -234,6 +234,18 @@ export function useNostr(): [NostrState, NostrActions] {
         url: window.location.origin,
         perms: ['sign_event:30023', 'sign_event:30024', 'sign_event:27235', 'sign_event:30001', 'sign_event:10003', 'sign_event:1', 'sign_event:7', 'get_public_key'],
       })
+
+      // On mobile, add callback URL so Primal can redirect back after granting permissions
+      // instead of relying on flaky WebSocket relay responses
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      if (isMobile) {
+        const url = new URL(uri.replace('nostrconnect://', 'https://'))
+        url.searchParams.set('callback', `${window.location.origin}/auth/callback`)
+        uri = `nostrconnect://${url.pathname.slice(1)}?${url.searchParams.toString()}`
+        // Store client secret key in sessionStorage for callback page to use
+        sessionStorage.setItem('samizdat_nip46_clientsk', Array.from(clientSk).map(b => b.toString(16).padStart(2, '0')).join(''))
+        sessionStorage.setItem('samizdat_nip46_secret', secret)
+      }
 
       setIsLoggingIn(true)
 
@@ -271,6 +283,21 @@ export function useNostr(): [NostrState, NostrActions] {
       setLoginError(e.message || 'Failed to generate QR code')
       setIsLoggingIn(false)
       return null
+    }
+  }, [])
+
+  // Handle NIP-46 callback return (mobile redirect from Primal etc.)
+  useEffect(() => {
+    const bunkerUri = sessionStorage.getItem('samizdat_nip46_bunker')
+    const clientSkHex = sessionStorage.getItem('samizdat_nip46_clientsk')
+    if (bunkerUri && clientSkHex) {
+      // Clean up immediately
+      sessionStorage.removeItem('samizdat_nip46_bunker')
+      sessionStorage.removeItem('samizdat_nip46_clientsk')
+      sessionStorage.removeItem('samizdat_nip46_secret')
+      sessionStorage.removeItem('samizdat_nip46_callback_received')
+      // Complete the bunker login
+      loginWithBunker(bunkerUri).catch(console.error)
     }
   }, [])
 
