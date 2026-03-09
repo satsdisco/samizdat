@@ -231,20 +231,23 @@ export function LoginScreen({
         {loginError && <div className="login-error">{loginError}</div>}
 
         <div className="login-methods">
-          {/* Log in with Nostr — triggers window.nostr (extension or widget polyfill) */}
-          <button
-            className="login-method-btn featured"
-            onClick={onExtensionLogin}
-            disabled={isLoggingIn}
-          >
-            <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            {isLoggingIn ? 'Connecting…' : 'Log in with Nostr'}
-          </button>
+          {/* Extension — desktop users with Alby/nos2x */}
+          {typeof window !== 'undefined' && !!window.nostr && (
+            <button
+              className="login-method-btn featured"
+              onClick={onExtensionLogin}
+              disabled={isLoggingIn}
+            >
+              <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              {isLoggingIn ? 'Connecting…' : 'Log in with Extension'}
+            </button>
+          )}
 
+          {/* QR / Remote signer */}
           <button
-            className="login-method-btn"
+            className={`login-method-btn${typeof window === 'undefined' || !window.nostr ? ' featured' : ''}`}
             onClick={startQrFlow}
             disabled={isLoggingIn}
           >
@@ -257,7 +260,7 @@ export function LoginScreen({
               <rect x="14" y="18" width="3" height="3" />
               <rect x="18" y="18" width="3" height="3" />
             </svg>
-            Scan QR / Remote Signer
+            {isLoggingIn ? 'Connecting…' : 'Scan QR / Remote Signer'}
           </button>
 
           <button
