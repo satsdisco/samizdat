@@ -222,7 +222,7 @@ export function useNostr(): [NostrState, NostrActions] {
   const initiateQrLogin = useCallback(async (): Promise<{ uri: string; waitForConnection: () => Promise<void> } | null> => {
     setLoginError(null)
     try {
-      const { createNostrConnectURI, BunkerSigner } = await import('nostr-tools/nip46')
+      const { createNostrConnectURI } = await import('nostr-tools/nip46')
       const { generateSecretKey, getPublicKey } = await import('nostr-tools/pure')
       const clientSk = generateSecretKey()
       const clientPk = getPublicKey(clientSk)
@@ -255,32 +255,74 @@ export function useNostr(): [NostrState, NostrActions] {
       setIsLoggingIn(true)
 
       const waitForConnection = async () => {
-        // Retry logic: mobile browsers kill WebSockets when app-switching.
-        // Try up to 3 times with fresh connections.
-        const maxRetries = 3
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-          try {
-            const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 90000)
-            const pk = await signer.getPublicKey()
-            bunkerSignerRef.current = signer
-            saveAuth(pk, 'bunker')
-            await fetchUserData(pk)
-            return // success
-          } catch (e: any) {
-            const msg = e.message || ''
-            // Only retry on connection/subscription errors, not auth rejections
-            if (attempt < maxRetries && (msg.includes('subscription') || msg.includes('closed') || msg.includes('WebSocket') || msg.includes('timeout'))) {
-              console.log(`QR login attempt ${attempt} failed (${msg}), retrying...`)
-              continue
-            }
-            setLoginError(
-              msg.includes('subscription') || msg.includes('closed')
-                ? 'Connection dropped — this happens on mobile when switching apps. Try "Copy link instead" and paste in your signer app.'
-                : msg || 'QR login timed out or was rejected'
+        // Inkwell-style: raw relay subscription for kind 24133 responses,
+        // 120 second timeout, parallel relay connections via SimplePool
+        try {
+          const { SimplePool } = await import('nostr-tools/pool')
+          const { decrypt } = await import('nostr-tools/nip44')
+          const { getConversationKey } = await import('nostr-tools/nip44')
+          const pool = new SimplePool()
+
+          const response = await new Promise<{ bunkerPubkey: string }>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              sub?.close()
+              reject(new Error('Timed out waiting for signer (120s). Try again or use "Log in with Key" instead.'))
+            }, 120000)
+
+            const sub = pool.subscribeMany(
+              connectRelays,
+              { kinds: [24133], '#p': [clientPk], limit: 1 } as any,
+              {
+                onevent: async (event) => {
+                  try {
+                    // Decrypt response with NIP-44
+                    const conversationKey = getConversationKey(clientSk, event.pubkey)
+                    const decrypted = decrypt(event.content, conversationKey)
+                    const parsed = JSON.parse(decrypted)
+
+                    // Verify secret matches
+                    if (parsed.result !== secret && parsed.result !== 'ack') {
+                      return // not our response
+                    }
+
+                    clearTimeout(timeout)
+                    sub.close()
+                    resolve({ bunkerPubkey: event.pubkey })
+                  } catch (err) {
+                    console.log('NIP-46 decrypt attempt failed, trying NIP-04...', err)
+                    // Fallback: try NIP-04 decryption (some signers still use it)
+                    try {
+                      const nip04 = await import('nostr-tools/nip04')
+                      const decrypted = await nip04.decrypt(clientSk, event.pubkey, event.content)
+                      const parsed = JSON.parse(decrypted)
+                      if (parsed.result !== secret && parsed.result !== 'ack') return
+                      clearTimeout(timeout)
+                      sub.close()
+                      resolve({ bunkerPubkey: event.pubkey })
+                    } catch {
+                      // Not our event
+                    }
+                  }
+                },
+                oneose: () => {
+                  // End of stored events — just keep listening for new ones
+                }
+              }
             )
-          }
+          })
+
+          // Got bunker pubkey — now create the BunkerSigner for ongoing signing
+          const { BunkerSigner } = await import('nostr-tools/nip46')
+          const bunkerUri = `bunker://${response.bunkerPubkey}?${connectRelays.map(r => `relay=${encodeURIComponent(r)}`).join('&')}&secret=${secret}`
+          const signer = await BunkerSigner.fromURI(clientSk, bunkerUri, {}, 60000)
+          const pk = await signer.getPublicKey()
+          bunkerSignerRef.current = signer
+          saveAuth(pk, 'bunker')
+          await fetchUserData(pk)
+        } catch (e: any) {
+          setLoginError(e.message || 'Connection failed')
+          setIsLoggingIn(false)
         }
-        setIsLoggingIn(false)
       }
 
       return { uri, waitForConnection }
