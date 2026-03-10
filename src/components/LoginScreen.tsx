@@ -28,11 +28,13 @@ export function LoginScreen({
   const [nsecInput, setNsecInput] = useState('')
   const [qrUri, setQrUri] = useState<string | null>(null)
   const [qrWaiting, setQrWaiting] = useState(false)
+  const [bunkerConnecting, setBunkerConnecting] = useState(false)
   const abortRef = useRef(false)
 
   const handleBunkerSubmit = () => {
     const input = bunkerInput.trim()
     if (!input) return
+    setBunkerConnecting(true)
     onBunkerLogin(input)
   }
 
@@ -179,7 +181,7 @@ export function LoginScreen({
                 value={bunkerInput}
                 onChange={e => setBunkerInput(e.target.value)}
                 placeholder="bunker://..."
-                disabled={isLoggingIn}
+                disabled={bunkerConnecting}
                 autoComplete="off"
                 autoCapitalize="off"
               />
@@ -187,9 +189,9 @@ export function LoginScreen({
             <button
               type="submit"
               className="inline-connect-btn"
-              disabled={isLoggingIn || !bunkerInput.trim()}
+              disabled={bunkerConnecting || !bunkerInput.trim()}
             >
-              {isLoggingIn ? 'Connecting…' : 'Connect'}
+              {bunkerConnecting ? 'Connecting…' : 'Connect'}
             </button>
           </form>
 
@@ -293,13 +295,11 @@ export function LoginScreen({
           >
             <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               {isMobile ? (
-                // Mobile: link/connect icon
                 <>
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 </>
               ) : (
-                // Desktop: QR icon
                 <>
                   <rect x="3" y="3" width="7" height="7" rx="1" />
                   <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -311,7 +311,7 @@ export function LoginScreen({
                 </>
               )}
             </svg>
-            {isLoggingIn ? 'Connecting…' : isMobile ? 'Connect Signer App' : 'Scan QR / Remote Signer'}
+            {isLoggingIn ? 'Connecting…' : isMobile ? 'Connect via QR / Link' : 'Scan QR / Remote Signer'}
           </button>
 
           <button

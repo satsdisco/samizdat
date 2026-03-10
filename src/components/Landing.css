@@ -36,6 +36,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.8rem 2rem;
+  padding-top: calc(0.8rem + env(safe-area-inset-top, 0px));
   z-index: 100;
   background: rgba(245, 240, 225, 0.9);
   backdrop-filter: blur(8px);
@@ -645,11 +646,63 @@
 
 @media (max-width: 640px) {
   .landing-nav {
-    padding: 0.8rem 1.2rem;
+    padding: 0.6rem 1rem;
+    padding-top: calc(0.6rem + env(safe-area-inset-top, 0px));
+    gap: 0.5rem;
+  }
+
+  .landing-wordmark {
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+  }
+
+  .landing-nav-links {
+    gap: 0.6rem;
+  }
+
+  .landing-nav-link {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    /* Hide text, keep it accessible — mobile nav is too cramped */
+    display: none;
+  }
+
+  .landing-cta-sm {
+    font-size: 0.65rem;
+    padding: 0.45rem 0.9rem;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
   }
 
   .hero {
     padding: 5rem 1.2rem 3rem;
+    padding-top: calc(5rem + env(safe-area-inset-top, 0px));
+  }
+
+  .hero-title .title-line {
+    font-size: clamp(2rem, 10vw, 3.5rem);
+  }
+
+  .hero-subtitle {
+    font-size: 0.95rem;
+    padding: 0 0.5rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    padding: 0 1rem;
+  }
+
+  .hero-actions .cta-primary,
+  .hero-actions .cta-secondary {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    min-height: 48px;
+    font-size: 1rem;
   }
 
   .broadsheet {
@@ -665,11 +718,6 @@
     border-top: none;
   }
 
-  .hero-actions {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
   .mock-editor {
     padding: 1rem 1.5rem 1.5rem;
   }
@@ -680,5 +728,10 @@
 
   .hero-image-wrapper {
     box-shadow: 4px 4px 0 var(--landing-black);
+  }
+
+  /* Bottom safe area for gesture nav */
+  .landing-footer {
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
   }
 }

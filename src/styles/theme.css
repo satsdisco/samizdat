@@ -88,16 +88,11 @@ body {
  * uses edge-to-edge display. CSS env() insets give us the margins we need.
  * ─────────────────────────────────────────────────────────────────────────── */
 
-/* Ensure the viewport respects safe areas */
-html, body {
-  /* Prevent content from sliding under the status bar or gesture nav bar */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-  /* Override box-sizing since we're setting padding on html/body */
-  box-sizing: border-box;
-}
+/* 
+ * Don't pad html/body — it breaks sticky headers and fixed navs.
+ * Instead, individual components (landing-nav, titlebar) handle their own
+ * safe-area offsets so they sit below the status bar properly.
+ */
 
 /* Expose insets as CSS variables for component-level use */
 :root {

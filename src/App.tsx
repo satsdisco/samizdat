@@ -164,7 +164,6 @@ function App() {
             onQrLogin={actions.initiateQrLogin}
             isLoggingIn={nostr.isLoggingIn}
             loginError={nostr.loginError}
-
           />
         )
       }
