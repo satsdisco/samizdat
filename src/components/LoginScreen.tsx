@@ -95,48 +95,40 @@ export function LoginScreen({
       <div className="login-overlay">
         <div className="login-card">
           {isMobile ? (
-            // Mobile: QR code + copy link + instructions
+            // Mobile: two-path signer connect
             <>
               <h1>Connect Signer</h1>
 
               {qrUri ? (
                 <>
-                  <p className="login-subtitle">
-                    Scan this code from another device, or copy the link and paste it into your signer app.
-                  </p>
-
-                  <div className="qr-container">
-                    <div className="qr-code" style={{ maxWidth: '180px', margin: '0 auto' }}>
-                      <QRCodeSVG
-                        value={qrUri}
-                        size={180}
-                        level="M"
-                        bgColor="transparent"
-                        fgColor="currentColor"
-                      />
-                    </div>
-                    <div className="qr-status">
+                  {/* Path 1: Amber / signer that accepts nostrconnect links */}
+                  <div className="signer-path">
+                    <p className="login-subtitle" style={{ marginBottom: '0.6rem' }}>
+                      <strong>Using Amber?</strong> Copy this link and paste it in Amber to connect.
+                    </p>
+                    <button
+                      className="login-action-btn primary"
+                      onClick={() => {
+                        navigator.clipboard.writeText(qrUri)
+                          .then(() => setCopied(true))
+                          .catch(() => {})
+                        setTimeout(() => setCopied(false), 2000)
+                      }}
+                    >
+                      {copied ? '✓ Copied!' : 'Copy Connection Link'}
+                    </button>
+                    <div className="qr-status" style={{ marginTop: '0.6rem' }}>
                       <span className="qr-pulse" />
-                      Listening for signer…
+                      Listening for connection…
                     </div>
                   </div>
 
-                  <button
-                    className="login-action-btn primary"
-                    onClick={() => {
-                      navigator.clipboard.writeText(qrUri)
-                        .then(() => setCopied(true))
-                        .catch(() => {})
-                      setTimeout(() => setCopied(false), 2000)
-                    }}
-                    style={{ marginTop: '0.5rem' }}
-                  >
-                    {copied ? '✓ Copied!' : 'Copy Connection Link'}
-                  </button>
-
-                  <p className="login-hint" style={{ marginTop: '0.8rem' }}>
-                    Open <strong>Amber</strong> or your signer app → paste the link → approve.
-                    This page will detect the connection automatically.
+                  {/* Path 2: Primal / signer that provides bunker:// URIs */}
+                  <div className="login-divider">
+                    <span>using Primal or another signer?</span>
+                  </div>
+                  <p className="login-subtitle" style={{ marginBottom: '0.6rem', fontSize: '0.85rem' }}>
+                    Go to your signer's settings → copy your <strong>bunker://</strong> link → paste it below.
                   </p>
                 </>
               ) : qrWaiting ? (
@@ -186,9 +178,11 @@ export function LoginScreen({
 
           {loginError && <div className="login-error">{loginError}</div>}
 
-          <div className="login-divider">
-            <span>or paste a bunker link</span>
-          </div>
+          {!isMobile && (
+            <div className="login-divider">
+              <span>or paste a bunker link</span>
+            </div>
+          )}
 
           <form className="login-field compact" onSubmit={e => { e.preventDefault(); handleBunkerSubmit() }}>
             <div className="input-with-icon">
