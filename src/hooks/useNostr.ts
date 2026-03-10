@@ -258,7 +258,20 @@ export function useNostr(): [NostrState, NostrActions] {
           const { BunkerSigner } = await import('nostr-tools/nip46')
           console.log('[NIP-46] Waiting for signer via fromURI on', connectRelay)
           const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 120000)
-          console.log('[NIP-46] Signer connected! Getting public key...')
+          console.log('[NIP-46] Signer connected! Relays:', JSON.stringify((signer as any).bp?.relays))
+
+          // Force relay back to the connect relay — switchRelays() inside fromURI
+          // may have changed bp.relays to the signer's preferred relays which might
+          // be unreachable. The connect relay is proven to work (we just used it).
+          if ((signer as any).bp) {
+            const currentRelays = (signer as any).bp.relays || []
+            if (!currentRelays.includes(connectRelay)) {
+              console.log('[NIP-46] Adding connect relay back:', connectRelay)
+              ;(signer as any).bp.relays = [connectRelay, ...currentRelays]
+            }
+          }
+
+          console.log('[NIP-46] Getting public key with relays:', JSON.stringify((signer as any).bp?.relays))
           const pk = await signer.getPublicKey()
           console.log('[NIP-46] Got public key:', pk.slice(0, 12) + '...')
           bunkerSignerRef.current = signer
