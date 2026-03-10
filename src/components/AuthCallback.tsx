@@ -14,15 +14,21 @@ export function AuthCallback() {
   const navigate = useNavigate()
   const [status, setStatus] = useState('Completing login...')
   const [failed, setFailed] = useState(false)
+  const [debugLog, setDebugLog] = useState<string[]>([])
+  const addDebug = (msg: string) => setDebugLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`])
 
   useEffect(() => {
     const completeLogin = async () => {
       const clientSkHex = localStorage.getItem('samizdat_nip46_clientsk')
       const secret = localStorage.getItem('samizdat_nip46_secret')
 
+      addDebug(`clientSk: ${clientSkHex ? 'found (' + clientSkHex.length + ' chars)' : 'MISSING'}`)
+      addDebug(`secret: ${secret ? 'found' : 'MISSING'}`)
+
       if (!clientSkHex || !secret) {
         setStatus('No pending login session. Redirecting...')
-        setTimeout(() => navigate('/write', { replace: true }), 1000)
+        addDebug('localStorage empty — handshake data lost during redirect')
+        setTimeout(() => navigate('/write', { replace: true }), 3000)
         return
       }
 
@@ -38,6 +44,8 @@ export function AuthCallback() {
         const connectRelays = ['wss://relay.nsec.app', 'wss://relay.primal.net', 'wss://nos.lol', 'wss://relay.damus.io']
         const pool = new SimplePool()
 
+        addDebug(`clientPk: ${clientPk.slice(0, 12)}...`)
+        addDebug(`querying ${connectRelays.length} relays...`)
         setStatus('Waiting for signer response...')
 
         // Query for existing events first (Primal may have already sent it)
@@ -47,6 +55,7 @@ export function AuthCallback() {
           limit: 5,
         })
 
+        addDebug(`found ${events.length} kind:24133 events`)
         let bunkerPubkey: string | null = null
 
         // Try to decrypt each event — one of them should be our connect response
@@ -120,9 +129,11 @@ export function AuthCallback() {
         if (!bunkerPubkey) {
           pool.close(connectRelays)
           setFailed(true)
+          addDebug('no matching signer response found after query + 15s subscribe')
           setStatus('Could not find signer response.')
           return
         }
+        addDebug(`bunker pubkey: ${bunkerPubkey.slice(0, 12)}...`)
 
         setStatus('Connected! Setting up...')
 
@@ -209,6 +220,24 @@ export function AuthCallback() {
           >
             Back to Login
           </button>
+        </div>
+      )}
+      {debugLog.length > 0 && (
+        <div style={{
+          marginTop: '1.5rem',
+          padding: '1rem',
+          background: '#111',
+          borderRadius: '8px',
+          width: '100%',
+          maxWidth: '400px',
+          textAlign: 'left',
+          fontSize: '0.65rem',
+          fontFamily: "'JetBrains Mono', monospace",
+          color: '#666',
+          maxHeight: '200px',
+          overflow: 'auto',
+        }}>
+          {debugLog.map((line, i) => <div key={i}>{line}</div>)}
         </div>
       )}
     </div>
