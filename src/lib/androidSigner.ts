@@ -1,43 +1,68 @@
 /**
  * NIP-55 Android Signer Integration
- * 
- * Uses Android's intent system to communicate with signer apps (Amber, etc.)
- * No relays needed — communication is direct via URI scheme callbacks.
- * 
+ *
+ * Uses a native Capacitor plugin (NostrSignerPlugin.java) to send proper
+ * Android intents with extras to signer apps (Amber, etc.)
+ *
+ * This is the only way NIP-55 works correctly — WebView's window.open()
+ * can't pass intent extras, so the native plugin uses startActivityForResult.
+ *
  * Flow:
- * 1. Open nostrsigner: URI with type + callbackUrl
- * 2. Android shows app chooser if multiple signers installed  
- * 3. User approves in their signer app
- * 4. Signer opens callbackUrl with result params
- * 5. Our deep link handler catches it
- * 
- * Supports: get_public_key, sign_event, nip04_encrypt/decrypt, nip44_encrypt/decrypt
+ * 1. JS calls NostrSigner.getPublicKey()
+ * 2. Native plugin creates Intent with nostrsigner: URI + type extra
+ * 3. Android shows app chooser (Amber, Primal, etc.)
+ * 4. User approves in their signer app
+ * 5. Plugin receives result via onActivityResult
+ * 6. JS gets the pubkey/signature back as a promise resolution
  */
 
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 
-const CALLBACK_SCHEME = 'samizdat://signer-result'
-
-/** Pending request that's waiting for a signer callback */
-interface PendingRequest {
-  id: string
-  type: string
-  resolve: (result: SignerResult) => void
-  reject: (error: Error) => void
-  timeout: ReturnType<typeof setTimeout>
+// Type definition for the native plugin
+interface NostrSignerPluginType {
+  getPublicKey(options?: { permissions?: string }): Promise<{
+    result: string  // hex pubkey
+    package?: string  // signer package name
+  }>
+  signEvent(options: {
+    event: string  // event JSON
+    currentUser?: string  // hex pubkey
+    id?: string
+    package?: string  // target signer package
+  }): Promise<{
+    result: string  // signature
+    id?: string
+    event?: string  // full signed event JSON
+    package?: string
+  }>
+  nip04Encrypt(options: {
+    plaintext: string
+    pubkey: string
+    currentUser: string
+    package?: string
+  }): Promise<{ result: string }>
+  nip04Decrypt(options: {
+    ciphertext: string
+    pubkey: string
+    currentUser: string
+    package?: string
+  }): Promise<{ result: string }>
+  nip44Encrypt(options: {
+    plaintext: string
+    pubkey: string
+    currentUser: string
+    package?: string
+  }): Promise<{ result: string }>
+  nip44Decrypt(options: {
+    ciphertext: string
+    pubkey: string
+    currentUser: string
+    package?: string
+  }): Promise<{ result: string }>
 }
 
-export interface SignerResult {
-  result: string
-  id?: string
-  event?: string  // signed event JSON for sign_event
-  package?: string // signer package name
-}
-
-// Single pending request at a time
-let pendingRequest: PendingRequest | null = null
-// Saved signer package name (set after first successful interaction)
-let signerPackage: string | null = null
+// Register the native plugin
+const NostrSigner = registerPlugin<NostrSignerPluginType>('NostrSigner')
 
 /** Check if we're running as a native Android app */
 export function isNativeAndroid(): boolean {
@@ -49,123 +74,48 @@ export function androidSignerAvailable(): boolean {
   return isNativeAndroid()
 }
 
-/** Set up the deep link listener for signer callbacks */
-export async function initSignerListener(): Promise<void> {
-  if (!isNativeAndroid()) return
-
-  const { App } = await import('@capacitor/app')
-  
-  await App.addListener('appUrlOpen', ({ url }) => {
-    if (!url.startsWith('samizdat://signer-result')) return
-    if (!pendingRequest) return
-
-    try {
-      // Parse result from URL params
-      // Format: samizdat://signer-result?result=<value>&id=<id>&package=<pkg>&event=<json>
-      const paramStr = url.includes('?') ? url.split('?')[1] : ''
-      const params = new URLSearchParams(paramStr)
-
-      const result: SignerResult = {
-        result: params.get('result') || '',
-        id: params.get('id') || undefined,
-        event: params.get('event') || undefined,
-        package: params.get('package') || undefined,
-      }
-
-      // Save signer package for future requests
-      if (result.package) {
-        signerPackage = result.package
-        localStorage.setItem('samizdat_signer_package', result.package)
-      }
-
-      if (result.result) {
-        clearTimeout(pendingRequest.timeout)
-        pendingRequest.resolve(result)
-      } else {
-        clearTimeout(pendingRequest.timeout)
-        pendingRequest.reject(new Error('Signer returned empty result'))
-      }
-    } catch (e) {
-      if (pendingRequest) {
-        clearTimeout(pendingRequest.timeout)
-        pendingRequest.reject(e as Error)
-      }
-    } finally {
-      pendingRequest = null
-    }
-  })
-
-  // Restore saved package name
-  signerPackage = localStorage.getItem('samizdat_signer_package')
+/** Get saved signer package name */
+export function getSignerPackage(): string | null {
+  return localStorage.getItem('samizdat_signer_package')
 }
 
-/** Send a request to the Android signer and wait for callback */
-function sendSignerRequest(
-  type: string,
-  content: string = '',
-  extras: Record<string, string> = {},
-  timeoutMs: number = 120000
-): Promise<SignerResult> {
-  return new Promise((resolve, reject) => {
-    const id = Math.random().toString(36).slice(2, 10)
-    
-    // Cancel any existing pending request
-    if (pendingRequest) {
-      clearTimeout(pendingRequest.timeout)
-      pendingRequest.reject(new Error('Cancelled by new request'))
-      pendingRequest = null
-    }
-
-    const timeout = setTimeout(() => {
-      pendingRequest = null
-      reject(new Error('Signer request timed out'))
-    }, timeoutMs)
-
-    pendingRequest = { id, type, resolve, reject, timeout }
-
-    // Build the nostrsigner: URI
-    const params = new URLSearchParams()
-    params.set('type', type)
-    params.set('callbackUrl', CALLBACK_SCHEME)
-    params.set('id', id)
-    
-    // Add extras (current_user, pubkey, etc.)
-    for (const [key, value] of Object.entries(extras)) {
-      params.set(key, value)
-    }
-
-    // Build URI: nostrsigner:<content>?type=...&callbackUrl=...
-    const encodedContent = content ? encodeURIComponent(content) : ''
-    const uri = `nostrsigner:${encodedContent}?${params.toString()}`
-
-    // Open the intent — Android shows app chooser if multiple signers
-    // Don't set package so user can choose their preferred signer
-    window.open(uri, '_blank')
-  })
+/** Save signer package for future calls (skip app chooser) */
+function saveSignerPackage(pkg: string) {
+  localStorage.setItem('samizdat_signer_package', pkg)
 }
 
 /**
  * Get public key from Android signer.
- * This is the login flow — opens signer app chooser.
+ * Opens the native app chooser — user picks Amber, Primal, etc.
+ * Returns the hex pubkey.
  */
 export async function getPublicKey(): Promise<{ pubkey: string; package?: string }> {
-  const result = await sendSignerRequest('get_public_key', '', {}, 120000)
-  
+  const result = await NostrSigner.getPublicKey()
+
   if (!result.result || !/^[0-9a-f]{64}$/i.test(result.result)) {
-    throw new Error('Invalid public key from signer')
+    throw new Error('Invalid public key from signer: ' + (result.result || '(empty)'))
   }
-  
+
+  // Save the signer package so future sign requests skip the chooser
+  if (result.package) {
+    saveSignerPackage(result.package)
+  }
+
   return { pubkey: result.result, package: result.package }
 }
 
 /**
  * Sign a nostr event using the Android signer.
- * Returns the signature (or full signed event JSON).
+ * If we know the signer package, it opens directly. Otherwise shows chooser.
  */
 export async function signEvent(eventJson: string, pubkey: string): Promise<{ signature: string; signedEvent?: string }> {
-  const result = await sendSignerRequest('sign_event', eventJson, {
-    current_user: pubkey,
-    id: JSON.parse(eventJson).id || '',
+  const pkg = getSignerPackage()
+
+  const result = await NostrSigner.signEvent({
+    event: eventJson,
+    currentUser: pubkey,
+    id: (() => { try { return JSON.parse(eventJson).id || '' } catch { return '' } })(),
+    ...(pkg ? { package: pkg } : {}),
   })
 
   return {
@@ -175,8 +125,57 @@ export async function signEvent(eventJson: string, pubkey: string): Promise<{ si
 }
 
 /**
- * Get the saved signer package name.
+ * NIP-04 encrypt using Android signer.
  */
-export function getSignerPackage(): string | null {
-  return signerPackage
+export async function nip04Encrypt(plaintext: string, recipientPubkey: string, currentUserPubkey: string): Promise<string> {
+  const pkg = getSignerPackage()
+  const result = await NostrSigner.nip04Encrypt({
+    plaintext,
+    pubkey: recipientPubkey,
+    currentUser: currentUserPubkey,
+    ...(pkg ? { package: pkg } : {}),
+  })
+  return result.result
+}
+
+/**
+ * NIP-04 decrypt using Android signer.
+ */
+export async function nip04Decrypt(ciphertext: string, senderPubkey: string, currentUserPubkey: string): Promise<string> {
+  const pkg = getSignerPackage()
+  const result = await NostrSigner.nip04Decrypt({
+    ciphertext,
+    pubkey: senderPubkey,
+    currentUser: currentUserPubkey,
+    ...(pkg ? { package: pkg } : {}),
+  })
+  return result.result
+}
+
+/**
+ * NIP-44 encrypt using Android signer.
+ */
+export async function nip44Encrypt(plaintext: string, recipientPubkey: string, currentUserPubkey: string): Promise<string> {
+  const pkg = getSignerPackage()
+  const result = await NostrSigner.nip44Encrypt({
+    plaintext,
+    pubkey: recipientPubkey,
+    currentUser: currentUserPubkey,
+    ...(pkg ? { package: pkg } : {}),
+  })
+  return result.result
+}
+
+/**
+ * NIP-44 decrypt using Android signer.
+ */
+export async function nip44Decrypt(ciphertext: string, senderPubkey: string, currentUserPubkey: string): Promise<string> {
+  const pkg = getSignerPackage()
+  const result = await NostrSigner.nip44Decrypt({
+    ciphertext,
+    pubkey: senderPubkey,
+    currentUser: currentUserPubkey,
+    ...(pkg ? { package: pkg } : {}),
+  })
+  return result.result
 }
