@@ -258,31 +258,35 @@ export function useNostr(): [NostrState, NostrActions] {
           const { BunkerSigner } = await import('nostr-tools/nip46')
           console.log('[NIP-46] Waiting for signer via fromURI on', connectRelay)
           const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 120000)
-          console.log('[NIP-46] Signer connected! Relays:', JSON.stringify((signer as any).bp?.relays))
+          // fromURI's internal switchRelays() leaves the pool empty/dead.
+          // Solution: extract the signer pubkey and create a FRESH BunkerSigner
+          // using fromBunker with a clean pool connection.
+          const signerPubkey = (signer as any).bp?.pubkey
+          console.log('[NIP-46] Signer pubkey:', signerPubkey?.slice(0, 12) + '...')
 
-          // CRITICAL FIX: fromURI's internal switchRelays() can leave the pool empty.
-          // Force bp.relays and re-setup subscription to ensure the relay connection exists.
-          if ((signer as any).bp) {
-            (signer as any).bp.relays = [connectRelay]
-          }
-          // Close stale subscription if any
-          if ((signer as any).subCloser) {
-            try { (signer as any).subCloser.close() } catch {}
-            (signer as any).subCloser = undefined
-          }
-          // Re-establish subscription (this reconnects to the relay)
-          (signer as any).setupSubscription()
-          // Give the WebSocket a moment to connect
-          await new Promise(r => setTimeout(r, 1500))
+          // Close the broken signer
+          try { signer.close() } catch {}
 
-          console.log('[NIP-46] Pool relays after fix:', Object.keys((signer as any).pool?.relays || {}))
+          // Create a fresh signer with a clean pool
+          const freshSigner = BunkerSigner.fromBunker(clientSk, {
+            pubkey: signerPubkey,
+            relays: [connectRelay],
+            secret: secret,
+          })
+
+          // Wait for the fresh pool to connect
+          await new Promise(r => setTimeout(r, 2000))
+          console.log('[NIP-46] Fresh signer pool relays:', [...((freshSigner as any).pool?.relays?.keys?.() || [])])
+
           console.log('[NIP-46] Calling getPublicKey...')
           const pk = await Promise.race([
-            signer.getPublicKey(),
+            freshSigner.getPublicKey(),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getPublicKey timeout (60s)')), 60000))
           ])
+          // Use the fresh signer going forward
+          const signerToUse = freshSigner
           console.log('[NIP-46] Got public key:', pk.slice(0, 12) + '...')
-          bunkerSignerRef.current = signer
+          bunkerSignerRef.current = signerToUse
           saveAuth(pk, 'bunker')
           await fetchUserData(pk)
         } catch (e: any) {
