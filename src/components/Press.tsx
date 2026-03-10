@@ -1034,6 +1034,50 @@ export function Press() {
           <Link to="/" className="press-footer-link">← Back to Samizdat</Link>
         </div>
       </footer>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="press-bottom-tabs">
+        <button
+          className={`press-bottom-tab ${activeTab === 'press' ? 'active' : ''}`}
+          onClick={() => setActiveTab('press')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2" />
+          </svg>
+          Press
+        </button>
+        {loggedInPubkey && (
+          <button
+            className={`press-bottom-tab ${activeTab === 'feed' ? 'active' : ''}`}
+            onClick={() => setActiveTab('feed')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+            </svg>
+            Feed
+          </button>
+        )}
+        {loggedInPubkey && (
+          <button
+            className={`press-bottom-tab ${activeTab === 'bookmarks' ? 'active' : ''}`}
+            onClick={() => setActiveTab('bookmarks')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+            </svg>
+            Saved
+          </button>
+        )}
+        <Link to="/" className="press-bottom-tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+          Write
+        </Link>
+      </nav>
     </div>
   )
 }

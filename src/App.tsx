@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useDeepLinks } from './hooks/useDeepLinks'
 import { useBackButton } from './hooks/useBackButton'
+import { Capacitor } from '@capacitor/core'
 import { TitleBar } from './components/TitleBar'
 import { ArticleReader } from './components/ArticleReader'
 import { Press } from './components/Press'
@@ -260,12 +261,22 @@ function App() {
 function AppRoutes({ editorView }: { editorView: () => React.ReactNode }) {
   useDeepLinks()
   useBackButton()
+
+  // On native mobile, the app opens to the reader (Press) by default
+  // On web, it opens to the landing/editor view
+  const isNative = Capacitor.isNativePlatform()
+
   return (
     <Routes>
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/a/:naddr" element={<ArticleReader />} />
       <Route path="/read" element={<Press />} />
-      <Route path="*" element={editorView()} />
+      <Route path="/write" element={editorView()} />
+      {isNative ? (
+        <Route path="*" element={<Press />} />
+      ) : (
+        <Route path="*" element={editorView()} />
+      )}
     </Routes>
   )
 }

@@ -202,6 +202,109 @@ export function Landing({ onGetStarted }: LandingProps) {
         </div>
       </section>
 
+      {/* Reader Preview */}
+      <section className="reader-section">
+        <div className="reader-intro">
+          <h2>A beautiful place to read</h2>
+          <p>
+            Every article published on Samizdat gets a clean, distraction-free reader.
+            Serif typography. No ads. No pop-ups. Just the writing.
+          </p>
+          <Link to="/read" className="reader-cta">
+            Browse the Press →
+          </Link>
+        </div>
+
+        <div className="reader-preview-window">
+          <div className="window-chrome">
+            <div className="window-dots">
+              <span /><span /><span />
+            </div>
+            <div className="window-url">samizdat.press/a/naddr1...</div>
+          </div>
+          <div className="reader-preview-body">
+            <div className="mock-reader-banner" />
+            <div className="mock-reader-meta">
+              <div className="mock-reader-avatar" />
+              <div className="mock-reader-author">
+                <div className="mock-line w60" style={{ height: '10px', marginBottom: '4px' }} />
+                <div className="mock-line w40" style={{ height: '7px', opacity: 0.4 }} />
+              </div>
+            </div>
+            <h3 className="mock-reader-title">Freedom is a beautiful thing</h3>
+            <div className="mock-reader-text">
+              <div className="mock-line w100" />
+              <div className="mock-line w95" />
+              <div className="mock-line w88" />
+              <div className="mock-line w100" />
+              <div className="mock-line w72" />
+              <div className="mock-spacer" />
+              <div className="mock-line w100" />
+              <div className="mock-line w90" />
+              <div className="mock-line w60" />
+            </div>
+            <div className="mock-reader-actions">
+              <span className="mock-zap-btn">⚡ Zap</span>
+              <span className="mock-comment-btn">💬 Comments</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Zap-Gated Content */}
+      <section className="zapgate-section">
+        <div className="zapgate-content">
+          <div className="zapgate-text">
+            <h2>Get paid for your words</h2>
+            <p>
+              Set a price in sats. Readers see a preview, then unlock the full
+              article with a lightning zap. No middleman takes a cut. No payment
+              processor approves your content. Peer-to-peer, instant, global.
+            </p>
+            <div className="zapgate-features">
+              <div className="zapgate-feature">
+                <span className="zapgate-icon">⚡</span>
+                <div>
+                  <strong>Lightning-native payments</strong>
+                  <p>Readers zap sats directly to your wallet. You set the price.</p>
+                </div>
+              </div>
+              <div className="zapgate-feature">
+                <span className="zapgate-icon">🔒</span>
+                <div>
+                  <strong>Preview + paywall</strong>
+                  <p>Choose how much to show for free. The rest unlocks after payment.</p>
+                </div>
+              </div>
+              <div className="zapgate-feature">
+                <span className="zapgate-icon">🌐</span>
+                <div>
+                  <strong>No platform dependency</strong>
+                  <p>Your content, your relay, your rules. No approval process.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="zapgate-preview">
+            <div className="zapgate-card">
+              <div className="zapgate-card-text">
+                <div className="mock-line w100" />
+                <div className="mock-line w95" />
+                <div className="mock-line w88" />
+                <div className="mock-line w72" />
+              </div>
+              <div className="zapgate-fade" />
+              <div className="zapgate-paywall">
+                <span className="paywall-icon">⚡</span>
+                <span className="paywall-label">Unlock for 500 sats</span>
+                <span className="paywall-sub">Zap to read the full article</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Manifesto section */}
       <section className="manifesto-section">
         <div className="manifesto-content">

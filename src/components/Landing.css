@@ -514,6 +514,311 @@
   flex: 0;
 }
 
+/* Reader preview section */
+.reader-section {
+  padding: 5rem 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  gap: 3rem;
+  align-items: center;
+}
+
+.reader-intro {
+  flex: 1;
+  min-width: 280px;
+}
+
+.reader-intro h2 {
+  font-family: 'Oswald', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #f5f0e1;
+  margin: 0 0 1rem;
+}
+
+.reader-intro p {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: rgba(245, 240, 225, 0.7);
+  margin: 0 0 1.5rem;
+}
+
+.reader-cta {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #c0392b;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.reader-cta:hover {
+  color: #e74c3c;
+}
+
+.reader-preview-window {
+  flex: 1;
+  max-width: 420px;
+  background: #f5f0e1;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+}
+
+.reader-preview-body {
+  padding: 1.2rem 1.5rem;
+}
+
+.mock-reader-banner {
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(135deg, #2c2c2c 0%, #3a3a3a 100%);
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.mock-reader-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.mock-reader-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ddd;
+  flex-shrink: 0;
+}
+
+.mock-reader-author {
+  flex: 1;
+}
+
+.mock-reader-title {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #2d2d2d;
+  margin: 0 0 0.8rem;
+}
+
+.mock-reader-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 1rem;
+}
+
+.mock-reader-text .mock-line {
+  background: #d5d0c1;
+}
+
+.mock-reader-text .mock-spacer {
+  height: 6px;
+}
+
+.mock-reader-actions {
+  display: flex;
+  gap: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #e0dbd0;
+}
+
+.mock-zap-btn,
+.mock-comment-btn {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  color: #666;
+}
+
+.mock-zap-btn {
+  background: #fff3e0;
+  color: #e67e22;
+}
+
+.mock-comment-btn {
+  background: #f0f0f0;
+}
+
+/* Zap-gated content section */
+.zapgate-section {
+  padding: 5rem 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.zapgate-content {
+  display: flex;
+  gap: 3rem;
+  align-items: center;
+}
+
+.zapgate-text {
+  flex: 1;
+  min-width: 280px;
+}
+
+.zapgate-text h2 {
+  font-family: 'Oswald', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #f5f0e1;
+  margin: 0 0 1rem;
+}
+
+.zapgate-text > p {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: rgba(245, 240, 225, 0.7);
+  margin: 0 0 2rem;
+}
+
+.zapgate-features {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.zapgate-feature {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+
+.zapgate-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  width: 2rem;
+  text-align: center;
+}
+
+.zapgate-feature strong {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f5f0e1;
+  margin-bottom: 0.2rem;
+}
+
+.zapgate-feature p {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgba(245, 240, 225, 0.5);
+  margin: 0;
+}
+
+.zapgate-preview {
+  flex: 1;
+  max-width: 380px;
+}
+
+.zapgate-card {
+  background: #f5f0e1;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 1.5rem;
+  position: relative;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+}
+
+.zapgate-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.zapgate-card-text .mock-line {
+  background: #d5d0c1;
+}
+
+.zapgate-fade {
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, #f5f0e1);
+  margin-top: -20px;
+  position: relative;
+  z-index: 1;
+}
+
+.zapgate-paywall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 1.2rem 1rem;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.paywall-icon {
+  font-size: 1.8rem;
+}
+
+.paywall-label {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #e67e22;
+}
+
+.paywall-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  color: rgba(245, 240, 225, 0.5);
+}
+
+@media (max-width: 768px) {
+  .reader-section {
+    flex-direction: column;
+    padding: 3rem 1.5rem;
+    gap: 2rem;
+  }
+
+  .reader-preview-window {
+    max-width: 100%;
+  }
+
+  .reader-intro h2 {
+    font-size: 1.8rem;
+  }
+
+  .zapgate-section {
+    padding: 3rem 1.5rem;
+  }
+
+  .zapgate-content {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .zapgate-preview {
+    max-width: 100%;
+  }
+
+  .zapgate-text h2 {
+    font-size: 1.8rem;
+  }
+}
+
 /* Manifesto — the soul */
 .manifesto-section {
   padding: 5rem 2rem;
