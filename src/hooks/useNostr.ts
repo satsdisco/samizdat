@@ -259,29 +259,37 @@ export function useNostr(): [NostrState, NostrActions] {
           console.log('[NIP-46] Waiting for signer via fromURI on', connectRelay)
           const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 120000)
           console.log('[NIP-46] Signer connected! Relays:', JSON.stringify((signer as any).bp?.relays))
-          // Stay on relay.nsec.app for RPC — the signer only listens there.
-          // It's slow (~3s) but swapping relays breaks the session.
-          // Retry getPublicKey up to 3 times — relay.nsec.app is flaky and
-          // Primal can take up to ~60s to respond to RPC calls.
-          let pk: string | null = null
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-              console.log(`[NIP-46] getPublicKey attempt ${attempt}/3...`)
-              pk = await Promise.race([
-                signer.getPublicKey(),
-                new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getPublicKey timeout (30s)')), 30000))
-              ])
-              console.log('[NIP-46] Got public key:', pk.slice(0, 12) + '...')
-              break
-            } catch (e: any) {
-              console.warn(`[NIP-46] getPublicKey attempt ${attempt} failed:`, e.message)
-              if (attempt === 3) throw e
-              // Clear cached pubkey so it retries
-              ;(signer as any).cachedPubKey = undefined
-              await new Promise(r => setTimeout(r, 2000)) // wait 2s before retry
+
+          // Debug: check pool state
+          const pool = (signer as any).pool
+          if (pool) {
+            console.log('[NIP-46] Pool relays:', Object.keys(pool.relays || {}))
+            // Ensure relay connection is alive
+            for (const [url, relay] of Object.entries(pool.relays || {})) {
+              console.log(`[NIP-46] Relay ${url} status:`, (relay as any)?.status, (relay as any)?.ws?.readyState)
             }
           }
-          if (!pk) throw new Error('Failed to get public key after 3 attempts')
+
+          // The publish in sendRequest uses pool.publish(bp.relays, event)
+          // which calls pool.ensureRelay for each relay. If the WebSocket
+          // died after fromURI, ensureRelay should reconnect. But let's
+          // verify by doing a manual ping first.
+          try {
+            console.log('[NIP-46] Testing ping...')
+            await Promise.race([
+              signer.ping(),
+              new Promise<never>((_, reject) => setTimeout(() => reject(new Error('ping timeout')), 10000))
+            ])
+            console.log('[NIP-46] Ping OK!')
+          } catch (e: any) {
+            console.warn('[NIP-46] Ping failed:', e.message, '— will try getPublicKey anyway')
+          }
+
+          console.log('[NIP-46] Calling getPublicKey...')
+          const pk = await Promise.race([
+            signer.getPublicKey(),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getPublicKey timeout (60s)')), 60000))
+          ])
           console.log('[NIP-46] Got public key:', pk.slice(0, 12) + '...')
           bunkerSignerRef.current = signer
           saveAuth(pk, 'bunker')
