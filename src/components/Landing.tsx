@@ -204,6 +204,7 @@ export function Landing({ onGetStarted }: LandingProps) {
 
       {/* Reader Preview */}
       <section className="reader-section">
+        <div className="reader-inner">
         <div className="reader-intro">
           <h2>A beautiful place to read</h2>
           <p>
@@ -248,6 +249,7 @@ export function Landing({ onGetStarted }: LandingProps) {
               <span className="mock-comment-btn">💬 Comments</span>
             </div>
           </div>
+        </div>
         </div>
       </section>
 

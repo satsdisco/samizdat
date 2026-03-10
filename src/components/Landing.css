@@ -517,6 +517,10 @@
 /* Reader preview section */
 .reader-section {
   padding: 5rem 2rem;
+  background: var(--landing-black);
+}
+
+.reader-inner {
   max-width: 1100px;
   margin: 0 auto;
   display: flex;
@@ -530,7 +534,7 @@
 }
 
 .reader-intro h2 {
-  font-family: 'Oswald', sans-serif;
+  font-family: var(--landing-headline);
   font-size: 2.2rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -543,17 +547,17 @@
   font-family: 'Source Serif 4', Georgia, serif;
   font-size: 1.1rem;
   line-height: 1.7;
-  color: rgba(245, 240, 225, 0.7);
+  color: rgba(245, 240, 225, 0.6);
   margin: 0 0 1.5rem;
 }
 
 .reader-cta {
-  font-family: 'Oswald', sans-serif;
+  font-family: var(--landing-headline);
   font-size: 1rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #c0392b;
+  color: var(--landing-red);
   text-decoration: none;
   transition: color 0.15s;
 }
@@ -654,11 +658,11 @@
 /* Zap-gated content section */
 .zapgate-section {
   padding: 5rem 2rem;
-  max-width: 1100px;
-  margin: 0 auto;
 }
 
 .zapgate-content {
+  max-width: 1100px;
+  margin: 0 auto;
   display: flex;
   gap: 3rem;
   align-items: center;
@@ -670,12 +674,12 @@
 }
 
 .zapgate-text h2 {
-  font-family: 'Oswald', sans-serif;
+  font-family: var(--landing-headline);
   font-size: 2.2rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  color: #f5f0e1;
+  color: var(--landing-text);
   margin: 0 0 1rem;
 }
 
@@ -683,7 +687,7 @@
   font-family: 'Source Serif 4', Georgia, serif;
   font-size: 1.1rem;
   line-height: 1.7;
-  color: rgba(245, 240, 225, 0.7);
+  color: var(--landing-text-secondary);
   margin: 0 0 2rem;
 }
 
@@ -711,7 +715,7 @@
   font-family: 'Inter', sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #f5f0e1;
+  color: var(--landing-text);
   margin-bottom: 0.2rem;
 }
 
@@ -719,7 +723,7 @@
   font-family: 'Source Serif 4', Georgia, serif;
   font-size: 0.85rem;
   line-height: 1.5;
-  color: rgba(245, 240, 225, 0.5);
+  color: var(--landing-text-faint);
   margin: 0;
 }
 
