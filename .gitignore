@@ -23,3 +23,14 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Android build outputs & secrets
+android/local.properties
+android/.gradle/
+android/app/build/
+android/build/
+*.keystore
+*.jks
+# Capacitor generated files that should not be committed
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/public/

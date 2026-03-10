@@ -5,6 +5,7 @@ import { nip19 } from 'nostr-tools'
 import { DEFAULT_RELAYS, fetchProfile, publishToRelays } from '../lib/nostr'
 import { signEvent, canSign } from '../lib/signer'
 import { useLoadingMessage } from '../hooks/useLoadingMessage'
+import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import './Press.css'
 
 // Default editor — satsdisco's pubkey (site creator)
@@ -191,6 +192,8 @@ export function Press() {
   const [exclusiveArticles, setExclusiveArticles] = useState<PressArticle[]>([])
   const [loading, setLoading] = useState(true)
   const [editorProfile, setEditorProfile] = useState<Profile | null>(null)
+  // Pull-to-refresh: increment to force the press useEffect to re-run
+  const [pressRefreshKey, setPressRefreshKey] = useState(0)
 
   // My Feed (follow list articles)
   const [feedArticles, setFeedArticles] = useState<PressArticle[]>([])
@@ -239,6 +242,16 @@ export function Press() {
   }, [showCurate, curatedPubkeys])
 
   const loadingMsg = useLoadingMessage()
+
+  // Pull-to-refresh: clears cache and reloads the press
+  usePullToRefresh({
+    onRefresh: () => {
+      sessionStorage.removeItem('samizdat_press_cache')
+      setLoading(true)
+      setPressRefreshKey(k => k + 1)
+    },
+    disabled: activeTab !== 'press',
+  })
 
   // Check login on mount
   useEffect(() => {
@@ -392,7 +405,7 @@ export function Press() {
       }
     }
     loadPress()
-  }, [])
+  }, [pressRefreshKey])
 
   // === MY FEED TAB (loads on demand) ===
   useEffect(() => {

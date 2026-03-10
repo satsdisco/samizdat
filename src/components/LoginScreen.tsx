@@ -13,6 +13,8 @@ interface LoginScreenProps {
   loginError: string | null
 }
 
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
 export function LoginScreen({
   onExtensionLogin,
   onBunkerLogin,
@@ -51,11 +53,16 @@ export function LoginScreen({
       const result = await onQrLogin()
       if (!result || abortRef.current) return
       setQrUri(result.uri)
-      await result.waitForConnection()
+
+      // On mobile, don't auto-wait — user will tap "Open in Signer" which navigates away
+      // The callback page handles the return
+      if (!isMobile) {
+        await result.waitForConnection()
+      }
     } catch {
       // Error shown via loginError
     } finally {
-      setQrWaiting(false)
+      if (!isMobile) setQrWaiting(false)
     }
   }
 
@@ -80,56 +87,80 @@ export function LoginScreen({
     window.location.href = `https://nstart.me?${params.toString()}`
   }, [])
 
-  // QR code scan view
+  // QR / Signer connect view
   if (view === 'qr') {
     return (
       <div className="login-overlay">
         <div className="login-card">
-          <h1>Scan with Signer</h1>
-          <p className="login-subtitle">
-            Open your signing app (Amber, Nostrsigner) and scan this QR code
-            to connect securely.
-          </p>
+          {isMobile ? (
+            // Mobile: no QR, just deep link + bunker paste
+            <>
+              <h1>Connect Signer</h1>
+              <p className="login-subtitle">
+                Tap below to open your signing app (Amber, Primal, Nostrsigner).
+                You'll be redirected back after connecting.
+              </p>
 
-          <div className="qr-container">
-            {qrUri ? (
-              <>
-                <div className="qr-code">
-                  <QRCodeSVG
-                    value={qrUri}
-                    size={220}
-                    level="M"
-                    bgColor="transparent"
-                    fgColor="currentColor"
-                  />
-                </div>
-                <div className="qr-status">
-                  <span className="qr-pulse" />
-                  Waiting for signer…
-                </div>
-
-                {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+              {qrUri ? (
+                <div className="signer-connect-section">
                   <a
                     href={qrUri}
-                    className="login-method-btn featured"
-                    style={{ textDecoration: 'none', textAlign: 'center', marginTop: '0.5rem', display: 'block' }}
+                    className="login-action-btn primary"
+                    style={{ textDecoration: 'none', textAlign: 'center', display: 'block' }}
                   >
-                    Open in Signer App
+                    Open Signer App
                   </a>
-                )}
+                  <p className="login-hint">
+                    Don't have a signer app?{' '}
+                    <a href="https://www.nossign.app" target="_blank" rel="noopener noreferrer">
+                      Get one here
+                    </a>
+                  </p>
+                </div>
+              ) : qrWaiting ? (
+                <div className="qr-generating">Preparing connection…</div>
+              ) : null}
+            </>
+          ) : (
+            // Desktop: show QR code
+            <>
+              <h1>Scan with Signer</h1>
+              <p className="login-subtitle">
+                Open your signing app (Amber, Nostrsigner) and scan this QR code
+                to connect securely.
+              </p>
 
-                <button
-                  className="qr-copy-btn"
-                  onClick={() => navigator.clipboard.writeText(qrUri)}
-                  title="Copy connection URI"
-                >
-                  Copy link instead
-                </button>
-              </>
-            ) : qrWaiting ? (
-              <div className="qr-generating">Generating connection…</div>
-            ) : null}
-          </div>
+              <div className="qr-container">
+                {qrUri ? (
+                  <>
+                    <div className="qr-code">
+                      <QRCodeSVG
+                        value={qrUri}
+                        size={220}
+                        level="M"
+                        bgColor="transparent"
+                        fgColor="currentColor"
+                      />
+                    </div>
+                    <div className="qr-status">
+                      <span className="qr-pulse" />
+                      Waiting for signer…
+                    </div>
+
+                    <button
+                      className="qr-copy-btn"
+                      onClick={() => navigator.clipboard.writeText(qrUri)}
+                      title="Copy connection URI"
+                    >
+                      Copy link instead
+                    </button>
+                  </>
+                ) : qrWaiting ? (
+                  <div className="qr-generating">Generating connection…</div>
+                ) : null}
+              </div>
+            </>
+          )}
 
           {loginError && <div className="login-error">{loginError}</div>}
 
@@ -242,7 +273,7 @@ export function LoginScreen({
 
         <div className="login-methods">
           {/* Extension — desktop users with Alby/nos2x */}
-          {typeof window !== 'undefined' && !!window.nostr && (
+          {!isMobile && typeof window !== 'undefined' && !!window.nostr && (
             <button
               className="login-method-btn featured"
               onClick={onExtensionLogin}
@@ -255,22 +286,33 @@ export function LoginScreen({
             </button>
           )}
 
-          {/* QR / Remote signer */}
+          {/* Signer connect — desktop shows QR, mobile shows deep link */}
           <button
-            className={`login-method-btn${typeof window === 'undefined' || !window.nostr ? ' featured' : ''}`}
+            className={`login-method-btn${isMobile || !window.nostr ? ' featured' : ''}`}
             onClick={startQrFlow}
             disabled={isLoggingIn}
           >
             <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="3" height="3" />
-              <rect x="18" y="14" width="3" height="3" />
-              <rect x="14" y="18" width="3" height="3" />
-              <rect x="18" y="18" width="3" height="3" />
+              {isMobile ? (
+                // Mobile: link/connect icon
+                <>
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </>
+              ) : (
+                // Desktop: QR icon
+                <>
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="3" height="3" />
+                  <rect x="18" y="14" width="3" height="3" />
+                  <rect x="14" y="18" width="3" height="3" />
+                  <rect x="18" y="18" width="3" height="3" />
+                </>
+              )}
             </svg>
-            {isLoggingIn ? 'Connecting…' : 'Scan QR / Remote Signer'}
+            {isLoggingIn ? 'Connecting…' : isMobile ? 'Connect Signer App' : 'Scan QR / Remote Signer'}
           </button>
 
           <button

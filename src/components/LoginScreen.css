@@ -398,6 +398,24 @@
   margin-top: 0.6rem;
 }
 
+.signer-connect-section {
+  margin: 1rem 0;
+}
+
+.login-hint {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  text-align: center;
+  margin-top: 0.6rem;
+}
+
+.login-hint a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .login-footer a {
   color: var(--text-faint);
   text-decoration: underline;
@@ -411,38 +429,43 @@
 
 /* Mobile */
 @media (max-width: 640px) {
-  .login-screen {
-    padding: 1rem;
+  .login-overlay {
+    /* Respect safe areas on Android (status bar, gesture bar) */
+    padding-top: calc(env(safe-area-inset-top) + 1rem);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+    padding-left: calc(env(safe-area-inset-left) + 1rem);
+    padding-right: calc(env(safe-area-inset-right) + 1rem);
+    align-items: flex-start;
+    overflow-y: auto;
   }
 
   .login-card {
     padding: 1.5rem;
     max-width: 100%;
+    /* Full width on small screens */
+    width: 100%;
+    border-radius: 10px;
   }
 
-  .login-title {
-    font-size: 1.2rem;
+  .login-card h1 {
+    font-size: 1.4rem;
   }
 
-  .login-method {
-    min-height: 56px;
-    padding: 1rem;
+  .login-methods {
+    gap: 0.6rem;
   }
 
-  .login-method-title {
-    font-size: 0.85rem;
-  }
-
-  .login-btn {
-    min-height: 48px;
-    font-size: 0.85rem;
+  .login-method-btn {
+    min-height: 52px;
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
   }
 
   .login-input,
   .login-field input,
   .input-with-icon input {
     min-height: 44px;
-    font-size: 16px !important; /* prevents iOS auto-zoom on focus */
+    font-size: 16px !important; /* prevents Android auto-zoom on focus */
     padding: 0.8rem 0;
     -webkit-appearance: none;
   }
@@ -460,6 +483,16 @@
 
   .login-field.compact {
     flex-direction: column;
+  }
+
+  .login-action-btn {
+    min-height: 52px;
+    font-size: 1rem;
+  }
+
+  .login-create-btn {
+    min-height: 52px;
+    font-size: 1rem;
   }
 
   .qr-container canvas,

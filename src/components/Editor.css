@@ -284,6 +284,8 @@
 @media (max-width: 640px) {
   .editor-wrapper {
     padding: 0 1rem;
+    /* Extra bottom padding so content isn't hidden behind gesture bar */
+    padding-bottom: calc(env(safe-area-inset-bottom) + 4rem);
   }
 
   .title-input {
@@ -304,5 +306,36 @@
   .image-toolbar {
     bottom: 0.5rem;
     right: 0.5rem;
+  }
+
+  /* Editor toolbar: sticky at bottom of viewport above the keyboard.
+   * When the keyboard is open, the toolbar stays visible.
+   * On Android the keyboard pushes the viewport up when adjustResize is set,
+   * so the toolbar rides just above the keyboard. */
+  .editor-toolbar {
+    position: sticky;
+    bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 100;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    border-bottom: none;
+    margin: 0 -1rem;
+    padding: 0.5rem 1rem;
+    margin-top: 1rem;
+
+    /* Make toolbar buttons larger for touch */
+    gap: 0.75rem;
+  }
+
+  .toolbar-btn {
+    padding: 0.6rem;
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  /* Banner actions always visible on mobile (no hover) */
+  .banner-area .banner-actions {
+    opacity: 1;
   }
 }

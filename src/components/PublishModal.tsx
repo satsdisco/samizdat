@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import './PublishModal.css'
 
 interface PublishModalProps {
@@ -38,7 +39,12 @@ export function PublishModal({ title, onPublish, onClose, isPublishing, paragrap
     setTags(tags.filter(t => t !== tag))
   }
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
+    // Haptic feedback on publish tap (native Android only)
+    if (Capacitor.isNativePlatform()) {
+      const { Haptics, ImpactStyle } = await import('@capacitor/haptics')
+      await Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {})
+    }
     onPublish({
       summary,
       tags,

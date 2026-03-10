@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Samizdat app icon background — dark charcoal with the brand color -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportHeight="108"
+    android:viewportWidth="108">
+    <!-- Samizdat dark background (#0a0a0a) -->
+    <path
+        android:fillColor="#0a0a0a"
+        android:pathData="M0,0h108v108h-108z" />
+</vector>

@@ -13,8 +13,8 @@ export function AuthCallback() {
 
   useEffect(() => {
     const completeLogin = async () => {
-      const clientSkHex = sessionStorage.getItem('samizdat_nip46_clientsk')
-      const secret = sessionStorage.getItem('samizdat_nip46_secret')
+      const clientSkHex = localStorage.getItem('samizdat_nip46_clientsk')
+      const secret = localStorage.getItem('samizdat_nip46_secret')
 
       if (!clientSkHex || !secret) {
         setStatus('No pending login session. Redirecting...')
@@ -94,11 +94,11 @@ export function AuthCallback() {
         localStorage.setItem('samizdat_pubkey', pk)
         localStorage.setItem('samizdat_auth_method', 'bunker')
         // Store bunker details so main app can reconnect
-        sessionStorage.setItem('samizdat_callback_bunker_pubkey', bunkerPubkey)
+        localStorage.setItem('samizdat_callback_bunker_pubkey', bunkerPubkey)
 
-        // Clean up
-        sessionStorage.removeItem('samizdat_nip46_clientsk')
-        sessionStorage.removeItem('samizdat_nip46_secret')
+        // Clean up — remove key material immediately
+        localStorage.removeItem('samizdat_nip46_clientsk')
+        localStorage.removeItem('samizdat_nip46_secret')
 
         setStatus('Logged in! Redirecting...')
         setTimeout(() => {

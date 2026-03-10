@@ -1,0 +1,95 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace = "press.samizdat.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        applicationId "press.samizdat.app"
+        minSdkVersion rootProject.ext.minSdkVersion      // 24 (Android 7.0+)
+        targetSdkVersion rootProject.ext.targetSdkVersion // 36
+
+        // Version bump here for each release; versionCode must be strictly increasing
+        versionCode 1
+        versionName "1.0.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+            // Files and dirs to omit from the packaged assets dir
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+
+    // ── Signing ──────────────────────────────────────────────────────────────
+    // The release keystore is NOT committed to source control.
+    // Generate it with:
+    //   keytool -genkeypair -v -storetype PKCS12 \
+    //     -keystore samizdat-release.keystore \
+    //     -alias samizdat -keyalg RSA -keysize 2048 -validity 10000
+    // Then set these environment variables (or a local.properties override):
+    //   SAMIZDAT_KEYSTORE_PATH, SAMIZDAT_KEYSTORE_PASSWORD,
+    //   SAMIZDAT_KEY_ALIAS, SAMIZDAT_KEY_PASSWORD
+    signingConfigs {
+        release {
+            storeFile file(System.getenv("SAMIZDAT_KEYSTORE_PATH") ?: "samizdat-release.keystore")
+            storePassword System.getenv("SAMIZDAT_KEYSTORE_PASSWORD") ?: ""
+            keyAlias System.getenv("SAMIZDAT_KEY_ALIAS") ?: "samizdat"
+            keyPassword System.getenv("SAMIZDAT_KEY_PASSWORD") ?: ""
+        }
+    }
+
+    buildTypes {
+        debug {
+            debuggable true
+            minifyEnabled false
+        }
+
+        release {
+            // Enable R8 minification and resource shrinking
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // Apply signing config only if keystore env vars are set;
+            // otherwise assembleRelease produces an unsigned APK (compilation test only).
+            if (System.getenv("SAMIZDAT_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    // ── Compile options ───────────────────────────────────────────────────────
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+repositories {
+    flatDir {
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

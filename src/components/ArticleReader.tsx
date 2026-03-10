@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { markdownToHtml } from '../lib/markdown'
 import { fetchArticleByNaddr, fetchProfile, fetchComments, type ArticleData, type CommentData } from '../lib/reader'
 import { DEFAULT_RELAYS } from '../lib/nostr'
@@ -277,10 +278,30 @@ export function ArticleReader() {
           )}
           <button
             className="reader-share-btn"
-            onClick={() => {
+            onClick={async () => {
               const url = `https://samizdat.press/a/${naddr}`
-              navigator.clipboard.writeText(url)
-              alert('Link copied!')
+              if (Capacitor.isNativePlatform()) {
+                // Native Android share sheet
+                const { Share } = await import('@capacitor/share')
+                const { Haptics, ImpactStyle } = await import('@capacitor/haptics')
+                await Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
+                await Share.share({
+                  title: article?.title || 'Samizdat Article',
+                  text: article?.summary || article?.title || '',
+                  url,
+                  dialogTitle: 'Share article',
+                })
+              } else {
+                // Web fallback: try native share, then clipboard
+                if (navigator.share) {
+                  await navigator.share({ title: article?.title, url }).catch(() => {
+                    navigator.clipboard.writeText(url)
+                  })
+                } else {
+                  navigator.clipboard.writeText(url)
+                  alert('Link copied!')
+                }
+              }
             }}
           >
             🔗 Share

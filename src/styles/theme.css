@@ -82,3 +82,32 @@ body {
     --content-width: 100%;
   }
 }
+
+/* ─── Safe area / edge-to-edge for Android notch & gesture bar ─────────────
+ * Capacitor sets android:windowLayoutInDisplayCutoutMode="shortEdges" and
+ * uses edge-to-edge display. CSS env() insets give us the margins we need.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/* Ensure the viewport respects safe areas */
+html, body {
+  /* Prevent content from sliding under the status bar or gesture nav bar */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  /* Override box-sizing since we're setting padding on html/body */
+  box-sizing: border-box;
+}
+
+/* Expose insets as CSS variables for component-level use */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* ─── Native Android viewport meta (added via index.html) ───────────────────
+ * The viewport-fit=cover meta tag enables edge-to-edge;
+ * see index.html for the meta tag.
+ * ─────────────────────────────────────────────────────────────────────────── */

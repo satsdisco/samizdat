@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import './Toast.css'
 
 interface ToastProps {
@@ -20,12 +21,18 @@ export function Toast({ message, type, onClose, naddr }: ToastProps) {
 
   const readerUrl = naddr ? `https://samizdat.press/a/${naddr}` : null
 
-  const handleCopy = () => {
-    if (readerUrl) {
+  const handleCopy = async () => {
+    if (!readerUrl) return
+    if (Capacitor.isNativePlatform()) {
+      const { Clipboard } = await import('@capacitor/clipboard')
+      const { Haptics, ImpactStyle } = await import('@capacitor/haptics')
+      await Clipboard.write({ string: readerUrl })
+      await Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
+    } else {
       navigator.clipboard.writeText(readerUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (

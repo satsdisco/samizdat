@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Samizdat "S" lettermark — placeholder icon.
+  The letter S in Samizdat's accent red (#c0392b) on the dark background.
+  Replace with a proper designed icon before Play Store submission.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!--
+      "S" path — drawn as a bold geometric letterform centered in the 108×108 grid.
+      Designed to sit within the adaptive icon safe zone (18dp inset on each side).
+      Color: Samizdat accent red #c0392b
+    -->
+    <path
+        android:fillColor="#c0392b"
+        android:pathData="
+          M54,20
+          C38,20 26,30 26,43
+          C26,51 31,57 40,61
+          L54,66
+          C63,70 68,74 68,80
+          C68,87 61,92 54,92
+          C46,92 38,88 35,83
+          L28,89
+          C33,96 43,102 54,102
+          C70,102 82,92 82,79
+          C82,71 77,65 68,61
+          L54,56
+          C45,52 40,48 40,42
+          C40,35 47,30 54,30
+          C61,30 68,34 71,39
+          L78,33
+          C73,26 64,20 54,20
+          Z
+        " />
+</vector>

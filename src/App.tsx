@@ -1,5 +1,7 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useDeepLinks } from './hooks/useDeepLinks'
+import { useBackButton } from './hooks/useBackButton'
 import { TitleBar } from './components/TitleBar'
 import { ArticleReader } from './components/ArticleReader'
 import { Press } from './components/Press'
@@ -250,13 +252,22 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/a/:naddr" element={<ArticleReader />} />
-        <Route path="/read" element={<Press />} />
-        <Route path="*" element={editorView()} />
-      </Routes>
+      <AppRoutes editorView={editorView} />
     </BrowserRouter>
+  )
+}
+
+// Separate component so useDeepLinks/useBackButton (which need useNavigate) are inside BrowserRouter
+function AppRoutes({ editorView }: { editorView: () => React.ReactNode }) {
+  useDeepLinks()
+  useBackButton()
+  return (
+    <Routes>
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/a/:naddr" element={<ArticleReader />} />
+      <Route path="/read" element={<Press />} />
+      <Route path="*" element={editorView()} />
+    </Routes>
   )
 }
 

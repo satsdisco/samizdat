@@ -4,6 +4,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { Article, RelayInfo, NostrEvent } from '../types/nostr'
 import { setSecretKey as setSharedSecretKey } from '../lib/signer'
+import { storeNsec, retrieveNsec, clearStoredNsec, hasStoredNsec } from '../lib/secureStorage'
 import {
   fetchRelayList,
   fetchProfile,
@@ -119,6 +120,8 @@ export function useNostr(): [NostrState, NostrActions] {
     // Clear window.nostr.js widget state so re-login gets a fresh QR/session
     localStorage.removeItem('wnj:bunkerPointer')
     localStorage.removeItem('wnj:clientSecret')
+    // Wipe nsec from Keystore-backed secure storage
+    clearStoredNsec().catch(() => {})
     // Reload to fully reset the widget's in-memory NIP-46 connection
     window.location.reload()
   }
@@ -206,6 +209,13 @@ export function useNostr(): [NostrState, NostrActions] {
       secretKeyRef.current = sk
       setSharedSecretKey(sk)
       saveAuth(pk, 'nsec')
+
+      // Store nsec in Keystore-backed secure storage (encrypted at rest on Android)
+      // Never goes to localStorage or plaintext SharedPreferences
+      const hexFallback = Array.from(sk).map(b => b.toString(16).padStart(2, '0')).join('')
+      await storeNsec(nsecInput.startsWith('nsec1') ? nsecInput : hexFallback)
+        .catch(e => console.warn('[SecureStorage] Failed to store nsec:', e))
+
       await fetchUserData(pk)
     } catch (e: any) {
       setLoginError(e.message || 'Invalid private key')
@@ -243,9 +253,10 @@ export function useNostr(): [NostrState, NostrActions] {
         const url = new URL(uri.replace('nostrconnect://', 'https://'))
         url.searchParams.set('callback', `${window.location.origin}/auth/callback`)
         uri = `nostrconnect://${url.pathname.slice(1)}?${url.searchParams.toString()}`
-        // Store client secret key in sessionStorage for callback page to use
-        sessionStorage.setItem('samizdat_nip46_clientsk', Array.from(clientSk).map(b => b.toString(16).padStart(2, '0')).join(''))
-        sessionStorage.setItem('samizdat_nip46_secret', secret)
+        // Store client secret key in localStorage for callback page to use
+        // (sessionStorage gets wiped when browser navigates to external signer app)
+        localStorage.setItem('samizdat_nip46_clientsk', Array.from(clientSk).map(b => b.toString(16).padStart(2, '0')).join(''))
+        localStorage.setItem('samizdat_nip46_secret', secret)
       }
 
       setIsLoggingIn(true)
@@ -331,14 +342,14 @@ export function useNostr(): [NostrState, NostrActions] {
 
   // Handle NIP-46 callback return (mobile redirect from Primal etc.)
   useEffect(() => {
-    const bunkerUri = sessionStorage.getItem('samizdat_nip46_bunker')
-    const clientSkHex = sessionStorage.getItem('samizdat_nip46_clientsk')
+    const bunkerUri = localStorage.getItem('samizdat_nip46_bunker')
+    const clientSkHex = localStorage.getItem('samizdat_nip46_clientsk')
     if (bunkerUri && clientSkHex) {
       // Clean up immediately
-      sessionStorage.removeItem('samizdat_nip46_bunker')
-      sessionStorage.removeItem('samizdat_nip46_clientsk')
-      sessionStorage.removeItem('samizdat_nip46_secret')
-      sessionStorage.removeItem('samizdat_nip46_callback_received')
+      localStorage.removeItem('samizdat_nip46_bunker')
+      localStorage.removeItem('samizdat_nip46_clientsk')
+      localStorage.removeItem('samizdat_nip46_secret')
+      localStorage.removeItem('samizdat_nip46_callback_received')
       // Complete the bunker login
       loginWithBunker(bunkerUri).catch(console.error)
     }
@@ -350,6 +361,43 @@ export function useNostr(): [NostrState, NostrActions] {
       fetchUserData(pubkey).catch(console.error)
     }
   }, [pubkey])
+
+  // On app launch: if user previously logged in with nsec and a stored key exists,
+  // prompt biometric and restore the signing key into memory.
+  // This means the user won't have to re-enter their nsec on every app open.
+  useEffect(() => {
+    if (authMethod !== 'nsec' || secretKeyRef.current) return
+    // Only attempt auto-restore if we think the user is logged in with nsec
+    hasStoredNsec().then(async (stored) => {
+      if (!stored) return
+      const nsec = await retrieveNsec() // triggers biometric prompt on native
+      if (!nsec) return // user cancelled biometric or no key found
+      try {
+        const { nip19 } = await import('nostr-tools')
+        const { getPublicKey } = await import('nostr-tools/pure')
+        let sk: Uint8Array
+        if (nsec.startsWith('nsec1')) {
+          const decoded = nip19.decode(nsec)
+          if (decoded.type !== 'nsec') return
+          sk = decoded.data
+        } else {
+          const hexBytes = nsec.match(/.{1,2}/g)?.map(b => parseInt(b, 16)) || []
+          sk = new Uint8Array(hexBytes)
+        }
+        // Validate key matches stored pubkey
+        const pk = getPublicKey(sk)
+        if (pubkey && pk !== pubkey) {
+          // Key mismatch — clear stale data
+          clearStoredNsec().catch(() => {})
+          return
+        }
+        secretKeyRef.current = sk
+        setSharedSecretKey(sk)
+      } catch (e) {
+        console.warn('[SecureStorage] Failed to restore nsec from secure storage:', e)
+      }
+    }).catch(console.warn)
+  }, [authMethod])
 
   // Sign an event based on auth method
   const signEvent = async (event: NostrEvent): Promise<NostrEvent> => {

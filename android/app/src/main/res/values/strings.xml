@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Samizdat</string>
+    <string name="title_activity_main">Samizdat</string>
+    <string name="package_name">press.samizdat.app</string>
+    <string name="custom_url_scheme">press.samizdat.app</string>
+</resources>

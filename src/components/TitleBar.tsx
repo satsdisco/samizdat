@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import type { RelayInfo } from '../types/nostr'
 import './TitleBar.css'
 
@@ -248,8 +249,16 @@ export function TitleBar({
                   </a>
                   <button
                     className="user-menu-item"
-                    onClick={() => {
-                      navigator.clipboard.writeText(npub || '')
+                    onClick={async () => {
+                      const text = npub || ''
+                      if (Capacitor.isNativePlatform()) {
+                        const { Clipboard } = await import('@capacitor/clipboard')
+                        const { Haptics, ImpactStyle } = await import('@capacitor/haptics')
+                        await Clipboard.write({ string: text })
+                        await Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
+                      } else {
+                        navigator.clipboard.writeText(text)
+                      }
                       setShowUserMenu(false)
                     }}
                   >

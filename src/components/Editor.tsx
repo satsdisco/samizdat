@@ -5,6 +5,7 @@ import Typography from '@tiptap/extension-typography'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import { useImperativeHandle, forwardRef, useCallback, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { markdownToHtml } from '../lib/markdown'
 import { uploadImage, type SignEventFn } from '../lib/upload'
 import './Editor.css'
@@ -116,8 +117,38 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({
     },
   })
 
-  // Re-bind insertImage with the actual editor
-  const handleInsertImageClick = useCallback(() => {
+  // Re-bind insertImage with the actual editor.
+  // On native Android: use @capacitor/camera for better photo picker UX.
+  // On web: fall back to file input.
+  const handleInsertImageClick = useCallback(async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { Camera, CameraSource, CameraResultType } = await import('@capacitor/camera')
+        const photo = await Camera.getPhoto({
+          quality: 85,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Prompt, // lets user choose Camera or Photos
+          promptLabelHeader: 'Insert Image',
+          promptLabelPhoto: 'Choose from Gallery',
+          promptLabelPicture: 'Take Photo',
+        })
+        if (photo.dataUrl) {
+          // Convert data URL to File for upload
+          const res = await fetch(photo.dataUrl)
+          const blob = await res.blob()
+          const file = new File([blob], 'photo.jpg', { type: blob.type || 'image/jpeg' })
+          insertImage(file)
+        }
+      } catch (e: any) {
+        if (e?.message !== 'User cancelled photos app') {
+          console.error('Camera error:', e)
+        }
+      }
+      return
+    }
+
+    // Web fallback
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*'
@@ -128,13 +159,8 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({
     input.click()
   }, [insertImage])
 
-  const handleBannerUpload = useCallback(() => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = 'image/*'
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return
+  const handleBannerUpload = useCallback(async () => {
+    const uploadFile = async (file: File) => {
       setIsBannerUploading(true)
       try {
         const result = await uploadImage(file, signEvent)
@@ -146,8 +172,43 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({
         setIsBannerUploading(false)
       }
     }
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { Camera, CameraSource, CameraResultType } = await import('@capacitor/camera')
+        const photo = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: true,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Prompt,
+          promptLabelHeader: 'Cover Image',
+          promptLabelPhoto: 'Choose from Gallery',
+          promptLabelPicture: 'Take Photo',
+        })
+        if (photo.dataUrl) {
+          const res = await fetch(photo.dataUrl)
+          const blob = await res.blob()
+          const file = new File([blob], 'banner.jpg', { type: blob.type || 'image/jpeg' })
+          await uploadFile(file)
+        }
+      } catch (e: any) {
+        if (e?.message !== 'User cancelled photos app') {
+          console.error('Banner camera error:', e)
+        }
+      }
+      return
+    }
+
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) return
+      await uploadFile(file)
+    }
     input.click()
-  }, [onBannerChange])
+  }, [onBannerChange, signEvent])
 
   const handleBannerRemove = useCallback(() => {
     onBannerChange?.('')
