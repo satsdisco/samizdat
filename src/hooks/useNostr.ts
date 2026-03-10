@@ -249,44 +249,84 @@ export function useNostr(): [NostrState, NostrActions] {
 
       const waitForConnection = async () => {
         try {
-          // Let BunkerSigner.fromURI handle everything:
-          // - connects to relay
-          // - subscribes to kind:24133
-          // - decrypts the signer's connect response
-          // - sets up the conversation key
-          // - keeps the connection alive for subsequent RPC calls
           const { BunkerSigner } = await import('nostr-tools/nip46')
-          console.log('[NIP-46] Waiting for signer via fromURI on', connectRelay)
-          const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 120000)
-          // fromURI's internal switchRelays() leaves the pool empty/dead.
-          // Solution: extract the signer pubkey and create a FRESH BunkerSigner
-          // using fromBunker with a clean pool connection.
-          const signerPubkey = (signer as any).bp?.pubkey
-          console.log('[NIP-46] Signer pubkey:', signerPubkey?.slice(0, 12) + '...')
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
-          // Close the broken signer
-          try { signer.close() } catch {}
+          let signerPubkey: string
 
-          // Create a fresh signer with a clean pool
+          if (isMobile) {
+            // MOBILE: The tab gets backgrounded when user switches to Amber/signer,
+            // killing WebSocket connections. Instead of a live subscription, we
+            // poll for the signer's response after the user returns.
+            const { SimplePool } = await import('nostr-tools/pool')
+            console.log('[NIP-46] Mobile: polling for signer response on', connectRelay)
+
+            signerPubkey = await new Promise<string>((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Timed out waiting for signer (120s)')), 120000)
+
+              // Poll every 3 seconds — query for existing kind:24133 events
+              const poll = async () => {
+                try {
+                  const pool = new SimplePool()
+                  const events = await pool.querySync([connectRelay], {
+                    kinds: [24133], '#p': [clientPk],
+                  })
+                  pool.close([connectRelay])
+
+                  for (const event of events) {
+                    try {
+                      const { decrypt, getConversationKey } = await import('nostr-tools/nip44')
+                      const ck = getConversationKey(clientSk, event.pubkey)
+                      const parsed = JSON.parse(decrypt(event.content, ck))
+                      if (parsed.result === secret || parsed.result === 'ack') {
+                        clearTimeout(timeout)
+                        console.log('[NIP-46] Mobile: found signer response from', event.pubkey.slice(0, 12))
+                        resolve(event.pubkey)
+                        return
+                      }
+                    } catch {
+                      try {
+                        const nip04 = await import('nostr-tools/nip04')
+                        const parsed = JSON.parse(await nip04.decrypt(clientSk, event.pubkey, event.content))
+                        if (parsed.result === secret || parsed.result === 'ack') {
+                          clearTimeout(timeout)
+                          resolve(event.pubkey)
+                          return
+                        }
+                      } catch {}
+                    }
+                  }
+                } catch (e) {
+                  console.warn('[NIP-46] Poll error:', e)
+                }
+                // Try again in 3s
+                setTimeout(poll, 3000)
+              }
+              poll()
+            })
+          } else {
+            // DESKTOP: Tab stays active, use fromURI with live subscription
+            console.log('[NIP-46] Desktop: waiting for signer via fromURI on', connectRelay)
+            const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 120000)
+            signerPubkey = (signer as any).bp?.pubkey
+            console.log('[NIP-46] Signer pubkey:', signerPubkey?.slice(0, 12) + '...')
+            try { signer.close() } catch {}
+          }
+
+          // Create a fresh BunkerSigner with a clean pool
           const freshSigner = BunkerSigner.fromBunker(clientSk, {
             pubkey: signerPubkey,
             relays: [connectRelay],
             secret: secret,
           })
-
-          // Wait for the fresh pool to connect
           await new Promise(r => setTimeout(r, 2000))
-          console.log('[NIP-46] Fresh signer pool relays:', [...((freshSigner as any).pool?.relays?.keys?.() || [])])
-
-          console.log('[NIP-46] Calling getPublicKey...')
+          console.log('[NIP-46] Fresh signer ready, calling getPublicKey...')
           const pk = await Promise.race([
             freshSigner.getPublicKey(),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getPublicKey timeout (60s)')), 60000))
           ])
-          // Use the fresh signer going forward
-          const signerToUse = freshSigner
           console.log('[NIP-46] Got public key:', pk.slice(0, 12) + '...')
-          bunkerSignerRef.current = signerToUse
+          bunkerSignerRef.current = freshSigner
           saveAuth(pk, 'bunker')
           await fetchUserData(pk)
         } catch (e: any) {
