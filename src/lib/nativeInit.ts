@@ -29,4 +29,12 @@ export async function initNative(): Promise<void> {
   } catch (e) {
     console.warn('[NativeInit] SplashScreen hide failed:', e)
   }
+
+  // Initialize NIP-55 signer listener for deep link callbacks
+  try {
+    const { initSignerListener } = await import('./androidSigner')
+    await initSignerListener()
+  } catch (e) {
+    console.warn('[NativeInit] Signer listener init failed:', e)
+  }
 }

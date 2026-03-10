@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useDeepLinks } from './hooks/useDeepLinks'
 import { useBackButton } from './hooks/useBackButton'
 import { Capacitor } from '@capacitor/core'
+import { getPublicKey as getAndroidSignerPubkey, androidSignerAvailable } from './lib/androidSigner'
 import { TitleBar } from './components/TitleBar'
 import { ArticleReader } from './components/ArticleReader'
 import { Press } from './components/Press'
@@ -162,6 +163,18 @@ function App() {
             onExtensionLogin={actions.loginWithExtension}
             onBunkerLogin={actions.loginWithBunker}
             onNsecLogin={actions.loginWithNsec}
+            onAndroidSignerLogin={androidSignerAvailable() ? async () => {
+              try {
+                const { pubkey } = await getAndroidSignerPubkey()
+                // Store pubkey + auth method — signer will be used for signing events later
+                localStorage.setItem('samizdat_pubkey', pubkey)
+                localStorage.setItem('samizdat_auth_method', 'android-signer')
+                // Force reload to pick up new auth state
+                window.location.href = '/write'
+              } catch (e: any) {
+                console.error('Android signer login failed:', e)
+              }
+            } : undefined}
             onQrLogin={actions.initiateQrLogin}
             isLoggingIn={nostr.isLoggingIn}
             loginError={nostr.loginError}

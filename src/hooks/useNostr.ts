@@ -18,7 +18,7 @@ import {
 } from '../lib/nostr'
 import { htmlToMarkdown } from '../lib/markdown'
 
-export type AuthMethod = 'extension' | 'bunker' | 'nsec' | null
+export type AuthMethod = 'extension' | 'bunker' | 'nsec' | 'android-signer' | null
 
 interface NostrState {
   // Auth

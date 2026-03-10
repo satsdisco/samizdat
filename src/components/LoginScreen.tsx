@@ -305,32 +305,35 @@ export function LoginScreen({
             </button>
           )}
 
-          {/* Signer connect — desktop shows QR, mobile shows deep link */}
-          <button
-            className={`login-method-btn${!isAndroidNative && (isMobile || !window.nostr) ? ' featured' : ''}`}
-            onClick={startQrFlow}
-            disabled={isLoggingIn}
-          >
-            <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              {isMobile ? (
-                <>
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                </>
-              ) : (
-                <>
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" />
-                  <rect x="14" y="14" width="3" height="3" />
-                  <rect x="18" y="14" width="3" height="3" />
-                  <rect x="14" y="18" width="3" height="3" />
-                  <rect x="18" y="18" width="3" height="3" />
-                </>
-              )}
-            </svg>
-            {isLoggingIn ? 'Connecting…' : isMobile ? 'Connect via QR / Link' : 'Scan QR / Remote Signer'}
-          </button>
+          {/* Signer connect — on native Android this is hidden (NIP-55 button above handles it),
+              on desktop shows QR, on mobile web shows deep link */}
+          {!isAndroidNative && (
+            <button
+              className={`login-method-btn${isMobile || !window.nostr ? ' featured' : ''}`}
+              onClick={startQrFlow}
+              disabled={isLoggingIn}
+            >
+              <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                {isMobile ? (
+                  <>
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </>
+                ) : (
+                  <>
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="3" height="3" />
+                    <rect x="18" y="14" width="3" height="3" />
+                    <rect x="14" y="18" width="3" height="3" />
+                    <rect x="18" y="18" width="3" height="3" />
+                  </>
+                )}
+              </svg>
+              {isLoggingIn ? 'Connecting…' : isMobile ? 'Connect via QR / Link' : 'Scan QR / Remote Signer'}
+            </button>
+          )}
 
           <button
             className="login-method-btn"

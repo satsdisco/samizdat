@@ -47,6 +47,22 @@ export async function signEvent(event: any): Promise<any> {
     return finalizeEvent(event as any, _secretKey) as any
   }
 
+  // NIP-55 Android signer — sends intent, waits for callback
+  if (method === 'android-signer') {
+    const { isNativeAndroid, signEvent: androidSign } = await import('./androidSigner')
+    if (isNativeAndroid()) {
+      const pubkey = localStorage.getItem('samizdat_pubkey') || ''
+      const eventJson = JSON.stringify(event)
+      const result = await androidSign(eventJson, pubkey)
+      // If signer returned the full signed event, parse and return it
+      if (result.signedEvent) {
+        return JSON.parse(result.signedEvent)
+      }
+      // Otherwise, attach the signature to the event
+      return { ...event, sig: result.signature }
+    }
+  }
+
   // Fallback: try extension even if auth method doesn't match
   if (window.nostr) {
     return await window.nostr.signEvent(event)
@@ -62,6 +78,7 @@ export function canSign(): boolean {
   const method = getAuthMethod()
   if (method === 'extension' && window.nostr) return true
   if (method === 'nsec' && _secretKey) return true
+  if (method === 'android-signer') return true
   if (window.nostr) return true
   return false
 }
