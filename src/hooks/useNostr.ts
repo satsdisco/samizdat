@@ -225,108 +225,84 @@ export function useNostr(): [NostrState, NostrActions] {
   }, [])
 
   // Login with QR code (NIP-46 client-initiated nostrconnect://)
+  // Based on nostr-login's proven implementation:
+  // 1. Use wss://relay.nsec.app as the single connect relay (all signers know it)
+  // 2. Build the URI manually to avoid encoding issues
+  // 3. Subscribe for kind:24133, decrypt NIP-44/NIP-04, accept 'ack' or secret
+  // 4. After getting signer pubkey, create BunkerSigner with the SAME relay+secret
   const initiateQrLogin = useCallback(async (): Promise<{ uri: string; waitForConnection: () => Promise<void> } | null> => {
     setLoginError(null)
     try {
-      const { createNostrConnectURI } = await import('nostr-tools/nip46')
       const { generateSecretKey, getPublicKey } = await import('nostr-tools/pure')
       const clientSk = generateSecretKey()
       const clientPk = getPublicKey(clientSk)
 
-      // NIP-46 handshake relays — nsec.app is purpose-built for this, primal.net for Primal iOS
-      const connectRelays = ['wss://relay.nsec.app', 'wss://relay.primal.net', 'wss://nos.lol', 'wss://relay.damus.io']
+      // Use relay.nsec.app as primary — it's the standard NIP-46 relay that all signers connect to
+      const connectRelay = 'wss://relay.nsec.app'
       const secret = Math.random().toString(36).slice(2, 10)
+      const perms = 'sign_event:30023,sign_event:30024,sign_event:27235,sign_event:30001,sign_event:10003,sign_event:1,sign_event:7,sign_event:5,get_public_key'
 
-      let uri = createNostrConnectURI({
-        clientPubkey: clientPk,
-        relays: connectRelays,
-        secret,
-        name: 'Samizdat',
-        url: window.location.origin,
-        perms: ['sign_event:30023', 'sign_event:30024', 'sign_event:27235', 'sign_event:30001', 'sign_event:10003', 'sign_event:1', 'sign_event:7', 'get_public_key'],
-      })
+      // Build URI manually — nostr-login style, no double-encoding of relay URLs
+      const uri = `nostrconnect://${clientPk}?relay=${encodeURIComponent(connectRelay)}&secret=${secret}&perms=${encodeURIComponent(perms)}&name=${encodeURIComponent('Samizdat')}&url=${encodeURIComponent(window.location.origin)}`
 
-      // On mobile, add callback URL so Primal can redirect back after granting permissions
-      // instead of relying on flaky WebSocket relay responses
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-      if (isMobile) {
-        const url = new URL(uri.replace('nostrconnect://', 'https://'))
-        // On native Android (Capacitor), use custom scheme so the OS routes back to our app
-        // On mobile web, use the web origin
-        const { Capacitor } = await import('@capacitor/core')
-        const callbackUrl = Capacitor.isNativePlatform()
-          ? 'samizdat://auth/callback'
-          : `${window.location.origin}/auth/callback`
-        url.searchParams.set('callback', callbackUrl)
-        uri = `nostrconnect://${url.pathname.slice(1)}?${url.searchParams.toString()}`
-        // Store client secret key in localStorage for callback page to use
-        // (sessionStorage gets wiped when browser navigates to external signer app)
-        localStorage.setItem('samizdat_nip46_clientsk', Array.from(clientSk).map(b => b.toString(16).padStart(2, '0')).join(''))
-        localStorage.setItem('samizdat_nip46_secret', secret)
-      }
+      // Store for mobile callback page (survives navigation to external signer app)
+      localStorage.setItem('samizdat_nip46_clientsk', Array.from(clientSk).map(b => b.toString(16).padStart(2, '0')).join(''))
+      localStorage.setItem('samizdat_nip46_secret', secret)
 
       setIsLoggingIn(true)
 
       const waitForConnection = async () => {
-        // Inkwell-style: raw relay subscription for kind 24133 responses,
-        // 120 second timeout, parallel relay connections via SimplePool
         try {
           const { SimplePool } = await import('nostr-tools/pool')
-          const { decrypt } = await import('nostr-tools/nip44')
-          const { getConversationKey } = await import('nostr-tools/nip44')
           const pool = new SimplePool()
 
-          const response = await new Promise<{ bunkerPubkey: string }>((resolve, reject) => {
+          // Listen for signer's connect response on the relay
+          const signerPubkey = await new Promise<string>((resolve, reject) => {
             const timeout = setTimeout(() => {
               sub?.close()
+              pool.close([connectRelay])
               reject(new Error('Timed out waiting for signer (120s). Try again or use "Log in with Key" instead.'))
             }, 120000)
 
             const sub = pool.subscribeMany(
-              connectRelays,
-              { kinds: [24133], '#p': [clientPk], limit: 1 } as any,
+              [connectRelay],
+              { kinds: [24133], '#p': [clientPk] } as any,
               {
                 onevent: async (event) => {
+                  // Try NIP-44 first, then NIP-04
+                  let parsed: any = null
                   try {
-                    // Decrypt response with NIP-44
-                    const conversationKey = getConversationKey(clientSk, event.pubkey)
-                    const decrypted = decrypt(event.content, conversationKey)
-                    const parsed = JSON.parse(decrypted)
-
-                    // Verify secret matches
-                    if (parsed.result !== secret && parsed.result !== 'ack') {
-                      return // not our response
-                    }
-
-                    clearTimeout(timeout)
-                    sub.close()
-                    resolve({ bunkerPubkey: event.pubkey })
-                  } catch (err) {
-                    console.log('NIP-46 decrypt attempt failed, trying NIP-04...', err)
-                    // Fallback: try NIP-04 decryption (some signers still use it)
+                    const { decrypt, getConversationKey } = await import('nostr-tools/nip44')
+                    const ck = getConversationKey(clientSk, event.pubkey)
+                    parsed = JSON.parse(decrypt(event.content, ck))
+                  } catch {
                     try {
                       const nip04 = await import('nostr-tools/nip04')
-                      const decrypted = await nip04.decrypt(clientSk, event.pubkey, event.content)
-                      const parsed = JSON.parse(decrypted)
-                      if (parsed.result !== secret && parsed.result !== 'ack') return
-                      clearTimeout(timeout)
-                      sub.close()
-                      resolve({ bunkerPubkey: event.pubkey })
+                      parsed = JSON.parse(await nip04.decrypt(clientSk, event.pubkey, event.content))
                     } catch {
-                      // Not our event
+                      return // not our event
                     }
                   }
+
+                  if (!parsed) return
+
+                  // Accept 'ack' or our secret as valid connect response
+                  if (parsed.result === secret || parsed.result === 'ack') {
+                    clearTimeout(timeout)
+                    sub.close()
+                    pool.close([connectRelay])
+                    resolve(event.pubkey)
+                  }
                 },
-                oneose: () => {
-                  // End of stored events — just keep listening for new ones
-                }
+                oneose: () => { /* keep listening */ }
               }
             )
           })
 
-          // Got bunker pubkey — now create the BunkerSigner for ongoing signing
+          // Got signer pubkey — create BunkerSigner for ongoing signing
+          // Use the SAME relay and client key — don't start a new handshake
           const { BunkerSigner } = await import('nostr-tools/nip46')
-          const bunkerUri = `bunker://${response.bunkerPubkey}?${connectRelays.map(r => `relay=${encodeURIComponent(r)}`).join('&')}&secret=${secret}`
+          const bunkerUri = `bunker://${signerPubkey}?relay=${encodeURIComponent(connectRelay)}&secret=${secret}`
           const signer = await BunkerSigner.fromURI(clientSk, bunkerUri, {}, 60000)
           const pk = await signer.getPublicKey()
           bunkerSignerRef.current = signer
