@@ -137,10 +137,14 @@ export function AuthCallback() {
 
         setStatus('Connected! Setting up...')
 
-        // Create BunkerSigner
+        // Create BunkerSigner — use fromBunker, NOT fromURI
+        // fromURI waits for a new connect response, but we already consumed it
         const { BunkerSigner } = await import('nostr-tools/nip46')
-        const bunkerUri = `bunker://${bunkerPubkey}?${connectRelays.map(r => `relay=${encodeURIComponent(r)}`).join('&')}&secret=${secret}`
-        const signer = await BunkerSigner.fromURI(clientSk, bunkerUri, {}, 30000)
+        const signer = BunkerSigner.fromBunker(clientSk, {
+          pubkey: bunkerPubkey,
+          relays: connectRelays,
+          secret: secret!,
+        })
         const pk = await signer.getPublicKey()
 
         // Store auth

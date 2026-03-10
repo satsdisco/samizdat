@@ -300,10 +300,15 @@ export function useNostr(): [NostrState, NostrActions] {
           })
 
           // Got signer pubkey — create BunkerSigner for ongoing signing
-          // Use the SAME relay and client key — don't start a new handshake
+          // IMPORTANT: Use fromBunker, NOT fromURI — fromURI opens a NEW subscription
+          // waiting for a connect response, but we already consumed it above.
+          // fromBunker just sets up the conversation key and subscription.
           const { BunkerSigner } = await import('nostr-tools/nip46')
-          const bunkerUri = `bunker://${signerPubkey}?relay=${encodeURIComponent(connectRelay)}&secret=${secret}`
-          const signer = await BunkerSigner.fromURI(clientSk, bunkerUri, {}, 60000)
+          const signer = BunkerSigner.fromBunker(clientSk, {
+            pubkey: signerPubkey,
+            relays: [connectRelay],
+            secret: secret,
+          })
           const pk = await signer.getPublicKey()
           bunkerSignerRef.current = signer
           saveAuth(pk, 'bunker')
