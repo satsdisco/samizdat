@@ -259,27 +259,8 @@ export function useNostr(): [NostrState, NostrActions] {
           console.log('[NIP-46] Waiting for signer via fromURI on', connectRelay)
           const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 120000)
           console.log('[NIP-46] Signer connected! Relays:', JSON.stringify((signer as any).bp?.relays))
-
-          // relay.nsec.app is slow (~3s latency). Add faster relays that the signer
-          // is also likely connected to, so RPC calls (getPublicKey, signEvent) go through.
-          // Keep relay.nsec.app as fallback since it's the proven handshake relay.
-          if ((signer as any).bp) {
-            const rpcRelays = [
-              'wss://relay.damus.io',
-              'wss://relay.primal.net',
-              'wss://nos.lol',
-              connectRelay, // fallback
-            ]
-            ;(signer as any).bp.relays = rpcRelays
-            // Re-setup subscription on new relays
-            if ((signer as any).subCloser) {
-              (signer as any).subCloser.close()
-              ;(signer as any).subCloser = undefined
-            }
-            ;(signer as any).setupSubscription()
-          }
-
-          console.log('[NIP-46] Getting public key with relays:', JSON.stringify((signer as any).bp?.relays))
+          // Stay on relay.nsec.app for RPC — the signer only listens there.
+          // It's slow (~3s) but swapping relays breaks the session.
           const pk = await signer.getPublicKey()
           console.log('[NIP-46] Got public key:', pk.slice(0, 12) + '...')
           bunkerSignerRef.current = signer
