@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background: near-black with subtle warmth -->
+  <rect width="512" height="512" rx="96" fill="#0d0d0d"/>
+  
+  <!-- The Samizdat mark: a bold geometric S formed by two opposing arrows/wedges,
+       evoking movement, resistance, and the flow of forbidden text.
+       The negative space between them creates the S shape.
+       Inspired by Soviet constructivist poster geometry. -->
+  
+  <!-- Top wedge — pointing right (the message going out) -->
+  <path d="M140 100 L372 100 L280 230 L140 230 Z" fill="#c0392b"/>
+  
+  <!-- Bottom wedge — pointing left (the message coming back, underground) -->
+  <path d="M372 282 L140 282 L232 412 L372 412 Z" fill="#c0392b"/>
+  
+  <!-- Center bar — the bridge, the connection, the defiance -->
+  <rect x="220" y="215" width="72" height="82" fill="#c0392b" rx="2"/>
+</svg>

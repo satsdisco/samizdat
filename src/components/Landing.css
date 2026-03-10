@@ -238,19 +238,7 @@
 
 /* Scroll hint */
 .hero-scroll-hint {
-  position: absolute;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-  font-family: var(--landing-typewriter);
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
-  color: var(--landing-text-faint);
-  animation: fadeInUp 0.6s ease 0.6s both;
+  display: none;
 }
 
 .hero-scroll-hint svg {
