@@ -260,31 +260,22 @@ export function useNostr(): [NostrState, NostrActions] {
           const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 120000)
           console.log('[NIP-46] Signer connected! Relays:', JSON.stringify((signer as any).bp?.relays))
 
-          // Debug: check pool state
-          const pool = (signer as any).pool
-          if (pool) {
-            console.log('[NIP-46] Pool relays:', Object.keys(pool.relays || {}))
-            // Ensure relay connection is alive
-            for (const [url, relay] of Object.entries(pool.relays || {})) {
-              console.log(`[NIP-46] Relay ${url} status:`, (relay as any)?.status, (relay as any)?.ws?.readyState)
-            }
+          // CRITICAL FIX: fromURI's internal switchRelays() can leave the pool empty.
+          // Force bp.relays and re-setup subscription to ensure the relay connection exists.
+          if ((signer as any).bp) {
+            (signer as any).bp.relays = [connectRelay]
           }
-
-          // The publish in sendRequest uses pool.publish(bp.relays, event)
-          // which calls pool.ensureRelay for each relay. If the WebSocket
-          // died after fromURI, ensureRelay should reconnect. But let's
-          // verify by doing a manual ping first.
-          try {
-            console.log('[NIP-46] Testing ping...')
-            await Promise.race([
-              signer.ping(),
-              new Promise<never>((_, reject) => setTimeout(() => reject(new Error('ping timeout')), 10000))
-            ])
-            console.log('[NIP-46] Ping OK!')
-          } catch (e: any) {
-            console.warn('[NIP-46] Ping failed:', e.message, '— will try getPublicKey anyway')
+          // Close stale subscription if any
+          if ((signer as any).subCloser) {
+            try { (signer as any).subCloser.close() } catch {}
+            (signer as any).subCloser = undefined
           }
+          // Re-establish subscription (this reconnects to the relay)
+          (signer as any).setupSubscription()
+          // Give the WebSocket a moment to connect
+          await new Promise(r => setTimeout(r, 1500))
 
+          console.log('[NIP-46] Pool relays after fix:', Object.keys((signer as any).pool?.relays || {}))
           console.log('[NIP-46] Calling getPublicKey...')
           const pk = await Promise.race([
             signer.getPublicKey(),
