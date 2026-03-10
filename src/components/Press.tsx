@@ -708,7 +708,7 @@ export function Press() {
           >
             ⚡ {pressRelays.length}
           </button>
-          <Link to="/" className="press-write-link">Start Writing →</Link>
+          <Link to="/write" className="press-write-link">Start Writing →</Link>
         </div>
       </nav>
 
@@ -898,7 +898,7 @@ export function Press() {
                   <span className="press-promo-icon">⚡</span>
                   <h3>Samizdat Exclusives</h3>
                   <p>Premium zap-gated articles from independent writers. Coming soon.</p>
-                  <Link to="/" className="press-promo-cta">Publish yours →</Link>
+                  <Link to="/write" className="press-promo-cta">Publish yours →</Link>
                 </div>
               </section>
             )}
@@ -1021,7 +1021,7 @@ export function Press() {
       {!loggedInPubkey && activeTab === 'press' && (
         <div className="press-login-prompt">
           <p>
-            <Link to="/" className="press-login-link">Sign in with nostr</Link> to unlock
+            <Link to="/write" className="press-login-link">Sign in with nostr</Link> to unlock
             your personal feed, bookmarks, and curation.
           </p>
         </div>
@@ -1031,7 +1031,7 @@ export function Press() {
         <div className="press-rule-heavy" />
         <div className="press-footer-content">
           <span className="press-footer-tagline">Uncensorable publishing on nostr</span>
-          <Link to="/" className="press-footer-link">← Back to Samizdat</Link>
+          <Link to="/write" className="press-footer-link">← Write</Link>
         </div>
       </footer>
 
@@ -1070,7 +1070,7 @@ export function Press() {
             Saved
           </button>
         )}
-        <Link to="/" className="press-bottom-tab">
+        <Link to="/write" className="press-bottom-tab">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
