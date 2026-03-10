@@ -4,7 +4,7 @@
 
 ### Required Tools
 - **Android Studio** (Ladybug or later) — provides the Android SDK and build tools
-- **JDK 17** — Gradle uses Java 17 (`brew install openjdk@17`)
+- **JDK 21** — Gradle uses Java 21 (`brew install openjdk@21`)
 - **Node.js 22+** and **npm**
 
 ### Environment Setup
@@ -13,7 +13,7 @@ After installing Android Studio, set these in your shell profile:
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 export PATH="$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$PATH"
 # If using Homebrew OpenJDK:
-export JAVA_HOME="$(brew --prefix openjdk@17)"
+export JAVA_HOME="$(brew --prefix openjdk@21)"
 export PATH="$JAVA_HOME/bin:$PATH"
 ```
 

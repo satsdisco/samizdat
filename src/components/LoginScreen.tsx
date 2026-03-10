@@ -168,7 +168,7 @@ export function LoginScreen({
             <span>or paste a bunker link</span>
           </div>
 
-          <div className="login-field compact">
+          <form className="login-field compact" onSubmit={e => { e.preventDefault(); handleBunkerSubmit() }}>
             <div className="input-with-icon">
               <svg className="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <rect x="3" y="11" width="18" height="11" rx="2" />
@@ -178,21 +178,20 @@ export function LoginScreen({
                 type="text"
                 value={bunkerInput}
                 onChange={e => setBunkerInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleBunkerSubmit()}
                 placeholder="bunker://..."
                 disabled={isLoggingIn}
+                autoComplete="off"
+                autoCapitalize="off"
               />
             </div>
-            {bunkerInput.trim() && (
-              <button
-                className="inline-connect-btn"
-                onClick={handleBunkerSubmit}
-                disabled={isLoggingIn}
-              >
-                Connect
-              </button>
-            )}
-          </div>
+            <button
+              type="submit"
+              className="inline-connect-btn"
+              disabled={isLoggingIn || !bunkerInput.trim()}
+            >
+              {isLoggingIn ? 'Connecting…' : 'Connect'}
+            </button>
+          </form>
 
           <div className="login-nav">
             <button className="login-back" onClick={handleQrBack}>
