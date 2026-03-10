@@ -1,24 +1,28 @@
 import { useState, useRef, useCallback } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
+import { androidSignerAvailable } from '../lib/androidSigner'
 import './LoginScreen.css'
 
-export type LoginMethod = 'extension' | 'bunker' | 'nsec'
+export type LoginMethod = 'extension' | 'bunker' | 'nsec' | 'android-signer'
 
 interface LoginScreenProps {
   onExtensionLogin: () => void
   onBunkerLogin: (bunkerUrl: string) => void
   onNsecLogin: (nsec: string) => void
+  onAndroidSignerLogin?: () => void
   onQrLogin: () => Promise<{ uri: string; waitForConnection: () => Promise<void> } | null>
   isLoggingIn: boolean
   loginError: string | null
 }
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+const isAndroidNative = androidSignerAvailable()
 
 export function LoginScreen({
   onExtensionLogin,
   onBunkerLogin,
   onNsecLogin,
+  onAndroidSignerLogin,
   onQrLogin,
   isLoggingIn,
   loginError,
@@ -273,10 +277,24 @@ export function LoginScreen({
         {loginError && <div className="login-error">{loginError}</div>}
 
         <div className="login-methods">
+          {/* Android native: "Open Signer App" — launches Android app chooser (Amber, Primal, etc.) */}
+          {isAndroidNative && onAndroidSignerLogin && (
+            <button
+              className="login-method-btn featured"
+              onClick={onAndroidSignerLogin}
+              disabled={isLoggingIn}
+            >
+              <svg className="method-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              {isLoggingIn ? 'Connecting…' : 'Open Signer App'}
+            </button>
+          )}
+
           {/* Extension — desktop users with Alby/nos2x */}
           {!isMobile && typeof window !== 'undefined' && !!window.nostr && (
             <button
-              className="login-method-btn featured"
+              className={`login-method-btn${!isAndroidNative ? ' featured' : ''}`}
               onClick={onExtensionLogin}
               disabled={isLoggingIn}
             >
@@ -289,7 +307,7 @@ export function LoginScreen({
 
           {/* Signer connect — desktop shows QR, mobile shows deep link */}
           <button
-            className={`login-method-btn${isMobile || !window.nostr ? ' featured' : ''}`}
+            className={`login-method-btn${!isAndroidNative && (isMobile || !window.nostr) ? ' featured' : ''}`}
             onClick={startQrFlow}
             disabled={isLoggingIn}
           >
