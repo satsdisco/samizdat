@@ -261,7 +261,27 @@ export function useNostr(): [NostrState, NostrActions] {
           console.log('[NIP-46] Signer connected! Relays:', JSON.stringify((signer as any).bp?.relays))
           // Stay on relay.nsec.app for RPC — the signer only listens there.
           // It's slow (~3s) but swapping relays breaks the session.
-          const pk = await signer.getPublicKey()
+          // Retry getPublicKey up to 3 times — relay.nsec.app is flaky and
+          // Primal can take up to ~60s to respond to RPC calls.
+          let pk: string | null = null
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              console.log(`[NIP-46] getPublicKey attempt ${attempt}/3...`)
+              pk = await Promise.race([
+                signer.getPublicKey(),
+                new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getPublicKey timeout (30s)')), 30000))
+              ])
+              console.log('[NIP-46] Got public key:', pk.slice(0, 12) + '...')
+              break
+            } catch (e: any) {
+              console.warn(`[NIP-46] getPublicKey attempt ${attempt} failed:`, e.message)
+              if (attempt === 3) throw e
+              // Clear cached pubkey so it retries
+              ;(signer as any).cachedPubKey = undefined
+              await new Promise(r => setTimeout(r, 2000)) // wait 2s before retry
+            }
+          }
+          if (!pk) throw new Error('Failed to get public key after 3 attempts')
           console.log('[NIP-46] Got public key:', pk.slice(0, 12) + '...')
           bunkerSignerRef.current = signer
           saveAuth(pk, 'bunker')
