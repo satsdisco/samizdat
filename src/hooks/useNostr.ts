@@ -251,7 +251,13 @@ export function useNostr(): [NostrState, NostrActions] {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       if (isMobile) {
         const url = new URL(uri.replace('nostrconnect://', 'https://'))
-        url.searchParams.set('callback', `${window.location.origin}/auth/callback`)
+        // On native Android (Capacitor), use custom scheme so the OS routes back to our app
+        // On mobile web, use the web origin
+        const { Capacitor } = await import('@capacitor/core')
+        const callbackUrl = Capacitor.isNativePlatform()
+          ? 'samizdat://auth/callback'
+          : `${window.location.origin}/auth/callback`
+        url.searchParams.set('callback', callbackUrl)
         uri = `nostrconnect://${url.pathname.slice(1)}?${url.searchParams.toString()}`
         // Store client secret key in localStorage for callback page to use
         // (sessionStorage gets wiped when browser navigates to external signer app)

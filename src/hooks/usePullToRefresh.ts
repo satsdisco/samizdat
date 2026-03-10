@@ -8,7 +8,6 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react'
-import { Capacitor } from '@capacitor/core'
 
 interface PullToRefreshOptions {
   onRefresh: () => void | Promise<void>
@@ -16,12 +15,18 @@ interface PullToRefreshOptions {
   disabled?: boolean
 }
 
-export function usePullToRefresh({ onRefresh, threshold = 80, disabled = false }: PullToRefreshOptions) {
+export function usePullToRefresh({ onRefresh, threshold = 150, disabled = false }: PullToRefreshOptions) {
   const touchStartY = useRef(0)
+  const touchStartScrollTop = useRef(0)
   const isRefreshing = useRef(false)
+  const lastRefreshTime = useRef(0)
 
   const triggerRefresh = useCallback(async () => {
     if (isRefreshing.current) return
+    // Debounce — don't refresh more than once per 5 seconds
+    const now = Date.now()
+    if (now - lastRefreshTime.current < 5000) return
+    lastRefreshTime.current = now
     isRefreshing.current = true
     try {
       await onRefresh()
@@ -35,13 +40,17 @@ export function usePullToRefresh({ onRefresh, threshold = 80, disabled = false }
 
     const handleTouchStart = (e: TouchEvent) => {
       touchStartY.current = e.touches[0].clientY
+      touchStartScrollTop.current = document.documentElement.scrollTop || document.body.scrollTop
     }
 
     const handleTouchEnd = (e: TouchEvent) => {
       const delta = e.changedTouches[0].clientY - touchStartY.current
       const scrollTop = document.documentElement.scrollTop || document.body.scrollTop
-      // Only trigger if pulled down from the very top
-      if (delta > threshold && scrollTop <= 0) {
+      // Only trigger if:
+      // 1. User was already at the very top when they started the touch
+      // 2. Still at the top when they released
+      // 3. Pulled down more than the threshold (150px default — much less sensitive)
+      if (touchStartScrollTop.current <= 5 && scrollTop <= 5 && delta > threshold) {
         triggerRefresh()
       }
     }
@@ -54,18 +63,7 @@ export function usePullToRefresh({ onRefresh, threshold = 80, disabled = false }
     }
   }, [threshold, disabled, triggerRefresh])
 
-  // Also refresh on app resume (foreground) — native only
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform() || disabled) return
-    let cleanup: (() => void) | undefined
-    const init = async () => {
-      const { App } = await import('@capacitor/app')
-      const { remove } = await App.addListener('resume', () => {
-        triggerRefresh()
-      })
-      cleanup = remove
-    }
-    init().catch(console.warn)
-    return () => { cleanup?.() }
-  }, [disabled, triggerRefresh])
+  // Don't auto-refresh on app resume — it causes slow relay reloads
+  // when switching between apps (e.g. returning from signer).
+  // Users can pull-to-refresh manually when they want fresh content.
 }

@@ -25,6 +25,14 @@ export function useDeepLinks() {
       const { App } = await import('@capacitor/app')
 
       const handleUrl = (url: string) => {
+        // samizdat:// custom scheme — auth callback from Primal/signer
+        if (url.startsWith('samizdat://')) {
+          const path = url.replace('samizdat://', '/')
+          // Navigate to /auth/callback which handles the NIP-46 reconnection
+          navigate(path, { replace: true })
+          return
+        }
+
         // nostr: URI scheme
         if (url.startsWith('nostr:')) {
           const entity = url.replace(/^nostr:/, '')

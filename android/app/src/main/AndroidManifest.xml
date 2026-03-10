@@ -31,6 +31,22 @@
                 <data android:scheme="nostr" />
             </intent-filter>
 
+            <!-- App custom scheme — used for NIP-46 signer callbacks -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="samizdat" />
+            </intent-filter>
+
+            <!-- nostrsigner: scheme — responses from Amber/signer apps -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="nostrsigner" />
+            </intent-filter>
+
             <!-- https://samizdat.press/a/... web deep links -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
