@@ -33,6 +33,7 @@ export function LoginScreen({
   const [qrUri, setQrUri] = useState<string | null>(null)
   const [qrWaiting, setQrWaiting] = useState(false)
   const [bunkerConnecting, setBunkerConnecting] = useState(false)
+  const [copied, setCopied] = useState(false)
   const abortRef = useRef(false)
 
   const handleBunkerSubmit = () => {
@@ -59,16 +60,11 @@ export function LoginScreen({
       const result = await onQrLogin()
       if (!result || abortRef.current) return
       setQrUri(result.uri)
-
-      // On mobile, don't auto-wait — user will tap "Open in Signer" which navigates away
-      // The callback page handles the return
-      if (!isMobile) {
-        await result.waitForConnection()
-      }
+      await result.waitForConnection()
     } catch {
       // Error shown via loginError
     } finally {
-      if (!isMobile) setQrWaiting(false)
+      setQrWaiting(false)
     }
   }
 
@@ -99,30 +95,50 @@ export function LoginScreen({
       <div className="login-overlay">
         <div className="login-card">
           {isMobile ? (
-            // Mobile: no QR, just deep link + bunker paste
+            // Mobile: QR code + copy link + instructions
             <>
               <h1>Connect Signer</h1>
-              <p className="login-subtitle">
-                Tap below to open your signing app (Amber, Primal, Nostrsigner).
-                You'll be redirected back after connecting.
-              </p>
 
               {qrUri ? (
-                <div className="signer-connect-section">
-                  <a
-                    href={qrUri}
-                    className="login-action-btn primary"
-                    style={{ textDecoration: 'none', textAlign: 'center', display: 'block' }}
-                  >
-                    Open Signer App
-                  </a>
-                  <p className="login-hint">
-                    Don't have a signer app?{' '}
-                    <a href="https://www.nossign.app" target="_blank" rel="noopener noreferrer">
-                      Get one here
-                    </a>
+                <>
+                  <p className="login-subtitle">
+                    Scan this code from another device, or copy the link and paste it into your signer app.
                   </p>
-                </div>
+
+                  <div className="qr-container">
+                    <div className="qr-code" style={{ maxWidth: '180px', margin: '0 auto' }}>
+                      <QRCodeSVG
+                        value={qrUri}
+                        size={180}
+                        level="M"
+                        bgColor="transparent"
+                        fgColor="currentColor"
+                      />
+                    </div>
+                    <div className="qr-status">
+                      <span className="qr-pulse" />
+                      Listening for signer…
+                    </div>
+                  </div>
+
+                  <button
+                    className="login-action-btn primary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(qrUri)
+                        .then(() => setCopied(true))
+                        .catch(() => {})
+                      setTimeout(() => setCopied(false), 2000)
+                    }}
+                    style={{ marginTop: '0.5rem' }}
+                  >
+                    {copied ? '✓ Copied!' : 'Copy Connection Link'}
+                  </button>
+
+                  <p className="login-hint" style={{ marginTop: '0.8rem' }}>
+                    Open <strong>Amber</strong> or your signer app → paste the link → approve.
+                    This page will detect the connection automatically.
+                  </p>
+                </>
               ) : qrWaiting ? (
                 <div className="qr-generating">Preparing connection…</div>
               ) : null}
