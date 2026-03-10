@@ -3,13 +3,17 @@ import { useNavigate } from 'react-router-dom'
 
 /**
  * NIP-46 mobile callback handler.
- * Primal opens this URL (plain, no params) after granting permissions.
- * The actual NIP-46 response went through the relay while we were backgrounded.
- * We need to reconnect to the relay and complete the handshake.
+ * 
+ * When Primal/signer redirects back after granting permissions,
+ * we land here. The actual NIP-46 response was sent to the relay.
+ * 
+ * Strategy: reconnect to the relay, find the response, complete login.
+ * If that fails within 15s, offer a retry or manual fallback.
  */
 export function AuthCallback() {
   const navigate = useNavigate()
   const [status, setStatus] = useState('Completing login...')
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     const completeLogin = async () => {
@@ -18,19 +22,17 @@ export function AuthCallback() {
 
       if (!clientSkHex || !secret) {
         setStatus('No pending login session. Redirecting...')
-        setTimeout(() => navigate('/', { replace: true }), 1000)
+        setTimeout(() => navigate('/write', { replace: true }), 1000)
         return
       }
 
       try {
         setStatus('Reconnecting to relay...')
 
-        // Reconstruct client secret key
         const clientSk = new Uint8Array(clientSkHex.match(/.{1,2}/g)!.map((b: string) => parseInt(b, 16)))
 
         const { SimplePool } = await import('nostr-tools/pool')
         const { getPublicKey } = await import('nostr-tools/pure')
-        const { decrypt, getConversationKey } = await import('nostr-tools/nip44')
 
         const clientPk = getPublicKey(clientSk)
         const connectRelays = ['wss://relay.nsec.app', 'wss://relay.primal.net', 'wss://nos.lol', 'wss://relay.damus.io']
@@ -38,82 +40,116 @@ export function AuthCallback() {
 
         setStatus('Waiting for signer response...')
 
-        // Subscribe and wait for the NIP-46 connect response
-        // Primal already sent it while we were backgrounded — it should be on the relay
-        const bunkerPubkey = await new Promise<string>((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            sub?.close()
-            reject(new Error('timeout'))
-          }, 30000) // 30s — response should already be there
+        // Query for existing events first (Primal may have already sent it)
+        const events = await pool.querySync(connectRelays, {
+          kinds: [24133],
+          '#p': [clientPk],
+          limit: 5,
+        })
 
-          const sub = pool.subscribeMany(
-            connectRelays,
-            { kinds: [24133], '#p': [clientPk], limit: 1 } as any,
-            {
-              onevent: async (event: any) => {
-                try {
-                  // Try NIP-44 first
-                  const conversationKey = getConversationKey(clientSk, event.pubkey)
-                  const decrypted = decrypt(event.content, conversationKey)
-                  const parsed = JSON.parse(decrypted)
-                  if (parsed.result === secret || parsed.result === 'ack') {
-                    clearTimeout(timeout)
-                    sub.close()
-                    resolve(event.pubkey)
-                    return
-                  }
-                } catch {
-                  // Try NIP-04 fallback
+        let bunkerPubkey: string | null = null
+
+        // Try to decrypt each event — one of them should be our connect response
+        for (const event of events) {
+          try {
+            const { decrypt, getConversationKey } = await import('nostr-tools/nip44')
+            const conversationKey = getConversationKey(clientSk, event.pubkey)
+            const decrypted = decrypt(event.content, conversationKey)
+            const parsed = JSON.parse(decrypted)
+            if (parsed.result === secret || parsed.result === 'ack' || parsed.id) {
+              bunkerPubkey = event.pubkey
+              break
+            }
+          } catch {
+            // Try NIP-04
+            try {
+              const nip04 = await import('nostr-tools/nip04')
+              const decrypted = await nip04.decrypt(clientSk, event.pubkey, event.content)
+              const parsed = JSON.parse(decrypted)
+              if (parsed.result === secret || parsed.result === 'ack' || parsed.id) {
+                bunkerPubkey = event.pubkey
+                break
+              }
+            } catch { /* not our event */ }
+          }
+        }
+
+        // If not found in existing events, subscribe and wait up to 15s
+        if (!bunkerPubkey) {
+          setStatus('Listening for signer...')
+          bunkerPubkey = await new Promise<string | null>((resolve) => {
+            const timeout = setTimeout(() => {
+              sub?.close()
+              resolve(null)
+            }, 15000)
+
+            const sub = pool.subscribeMany(
+              connectRelays,
+              { kinds: [24133], '#p': [clientPk] } as any,
+              {
+                onevent: async (event: any) => {
                   try {
-                    const nip04 = await import('nostr-tools/nip04')
-                    const decrypted = await nip04.decrypt(clientSk, event.pubkey, event.content)
+                    const { decrypt, getConversationKey } = await import('nostr-tools/nip44')
+                    const conversationKey = getConversationKey(clientSk, event.pubkey)
+                    const decrypted = decrypt(event.content, conversationKey)
                     const parsed = JSON.parse(decrypted)
-                    if (parsed.result === secret || parsed.result === 'ack') {
+                    if (parsed.result === secret || parsed.result === 'ack' || parsed.id) {
                       clearTimeout(timeout)
                       sub.close()
                       resolve(event.pubkey)
-                      return
                     }
-                  } catch { /* not our event */ }
-                }
-              },
-              oneose: () => { /* keep listening */ }
-            }
-          )
-        })
+                  } catch {
+                    try {
+                      const nip04 = await import('nostr-tools/nip04')
+                      const decrypted = await nip04.decrypt(clientSk, event.pubkey, event.content)
+                      const parsed = JSON.parse(decrypted)
+                      if (parsed.result === secret || parsed.result === 'ack' || parsed.id) {
+                        clearTimeout(timeout)
+                        sub.close()
+                        resolve(event.pubkey)
+                      }
+                    } catch { /* not ours */ }
+                  }
+                },
+                oneose: () => { /* keep waiting */ }
+              }
+            )
+          })
+        }
 
-        setStatus('Connected! Setting up signer...')
+        if (!bunkerPubkey) {
+          pool.close(connectRelays)
+          setFailed(true)
+          setStatus('Could not find signer response.')
+          return
+        }
 
-        // Now create the BunkerSigner for ongoing use
+        setStatus('Connected! Setting up...')
+
+        // Create BunkerSigner
         const { BunkerSigner } = await import('nostr-tools/nip46')
         const bunkerUri = `bunker://${bunkerPubkey}?${connectRelays.map(r => `relay=${encodeURIComponent(r)}`).join('&')}&secret=${secret}`
         const signer = await BunkerSigner.fromURI(clientSk, bunkerUri, {}, 30000)
         const pk = await signer.getPublicKey()
 
-        // Store auth info for the main app
+        // Store auth
         localStorage.setItem('samizdat_pubkey', pk)
         localStorage.setItem('samizdat_auth_method', 'bunker')
-        // Store bunker details so main app can reconnect
         localStorage.setItem('samizdat_callback_bunker_pubkey', bunkerPubkey)
-
-        // Clean up — remove key material immediately
         localStorage.removeItem('samizdat_nip46_clientsk')
         localStorage.removeItem('samizdat_nip46_secret')
 
-        setStatus('Logged in! Redirecting...')
+        pool.close(connectRelays)
+
+        setStatus('Logged in! ✓')
         setTimeout(() => {
-          // Force reload to pick up the new auth state
-          window.location.href = '/'
+          window.location.href = '/write'
         }, 500)
 
       } catch (e: any) {
         console.error('Callback login failed:', e)
-        if (e.message === 'timeout') {
-          setStatus('Signer response not found. Try logging in again.')
-        } else {
-          setStatus(`Login failed: ${e.message}`)
-        }
-        setTimeout(() => navigate('/', { replace: true }), 3000)
+        setFailed(true)
+        setStatus(`Login failed: ${e.message || 'Unknown error'}`)
       }
     }
 
@@ -127,15 +163,54 @@ export function AuthCallback() {
       alignItems: 'center',
       justifyContent: 'center',
       height: '100vh',
-      fontFamily: "'Source Serif 4', Georgia, serif",
-      fontSize: '1.2rem',
-      color: '#2d2d2d',
-      background: '#f5f0e1',
+      fontFamily: "'Inter', -apple-system, sans-serif",
+      color: '#e8e6e1',
+      background: '#0a0a0a',
       padding: '2rem',
       textAlign: 'center',
+      gap: '1.5rem',
     }}>
-      <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-      <p>{status}</p>
+      {!failed && <div style={{ fontSize: '2rem' }}>⏳</div>}
+      {failed && <div style={{ fontSize: '2rem' }}>⚠️</div>}
+      <p style={{ fontSize: '1.1rem' }}>{status}</p>
+      {failed && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%', maxWidth: '300px' }}>
+          <button
+            onClick={() => {
+              setFailed(false)
+              setStatus('Retrying...')
+              window.location.reload()
+            }}
+            style={{
+              padding: '0.8rem 1.5rem',
+              background: '#c0392b',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            Try Again
+          </button>
+          <button
+            onClick={() => navigate('/write', { replace: true })}
+            style={{
+              padding: '0.8rem 1.5rem',
+              background: 'transparent',
+              color: '#999',
+              border: '1px solid #333',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            Back to Login
+          </button>
+        </div>
+      )}
     </div>
   )
 }
