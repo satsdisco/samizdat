@@ -220,6 +220,8 @@ export function TitleBar({
               </button>
 
               {showUserMenu && (
+                <>
+                <div className="user-menu-backdrop" onClick={() => setShowUserMenu(false)} />
                 <div className="user-menu">
                   <div className="user-menu-header">
                     {profile?.picture && (
@@ -284,6 +286,7 @@ export function TitleBar({
                     Sign out
                   </button>
                 </div>
+                </>
               )}
             </div>
           </>
