@@ -18,6 +18,25 @@ import {
 } from '../lib/nostr'
 import { htmlToMarkdown } from '../lib/markdown'
 
+// Wrap NDK's NIP-46 signer to match our signEvent interface.
+// NDK sign() returns just the sig string; we need a full signed event.
+function makeNdkSignerWrapper(nip46signer: any, ndk: any, pk: string) {
+  return {
+    signEvent: async (event: any) => {
+      const { getEventHash } = await import('nostr-tools/pure')
+      // Ensure event has pubkey and id before signing
+      const withMeta = { ...event, pubkey: pk }
+      withMeta.id = getEventHash(withMeta)
+      const sig = await nip46signer.sign(withMeta)
+      return { ...withMeta, sig }
+    },
+    getPublicKey: () => Promise.resolve(pk),
+    close: () => { try { nip46signer.stop() } catch {} ; try { ndk.pool?.destroy() } catch {} },
+    _ndk: ndk,
+    _signer: nip46signer,
+  }
+}
+
 export type AuthMethod = 'extension' | 'bunker' | 'nsec' | 'android-signer' | null
 
 interface NostrState {
@@ -163,20 +182,39 @@ export function useNostr(): [NostrState, NostrActions] {
     setIsLoggingIn(true)
     setLoginError(null)
     try {
-      const { parseBunkerInput, BunkerSigner } = await import('nostr-tools/nip46')
-      const { generateSecretKey } = await import('nostr-tools/pure')
+      const NDK = await import('@nostr-dev-kit/ndk')
 
-      const bp = await parseBunkerInput(bunkerInput)
-      if (!bp) {
-        throw new Error('Invalid bunker link. Expected bunker://... or user@domain.com')
+      // Parse bunker:// URI to extract pubkey and relays
+      // Format: bunker://<pubkey>?relay=wss://...&relay=wss://...&secret=...
+      const stripped = bunkerInput.replace(/^nostr:/, '')
+      const url = new URL(stripped.replace('bunker://', 'https://dummy/'))
+      const signerPubkey = stripped.replace('bunker://', '').split('?')[0]
+      const relays = url.searchParams.getAll('relay')
+      const secret = url.searchParams.get('secret') || undefined
+
+      if (!signerPubkey || signerPubkey.length !== 64) {
+        throw new Error('Invalid bunker link. Expected bunker://<pubkey>?relay=...')
       }
 
-      const clientSk = generateSecretKey()
-      const signer = BunkerSigner.fromBunker(clientSk, bp)
-      await signer.connect()
-      const pk = await signer.getPublicKey()
+      const connectRelays = relays.length > 0 ? relays : ['wss://nos.lol', 'wss://relay.damus.io', 'wss://relay.primal.net']
 
-      bunkerSignerRef.current = signer
+      const ndk = new NDK.default({ explicitRelayUrls: connectRelays })
+      await ndk.connect()
+
+      const localSigner = NDK.NDKPrivateKeySigner.generate()
+      const nip46signer: any = new NDK.NDKNip46Signer(ndk, signerPubkey, localSigner)
+      nip46signer.bunkerFlowInit(secret)
+
+      console.log('[NIP-46] Bunker: connecting to', signerPubkey.slice(0, 12) + '...')
+      const user = await Promise.race([
+        nip46signer.blockUntilReady(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timed out (30s)')), 30000))
+      ])
+
+      const pk = user.pubkey
+      console.log('[NIP-46] Bunker: got public key:', pk.slice(0, 12) + '...')
+
+      bunkerSignerRef.current = makeNdkSignerWrapper(nip46signer, ndk, pk)
       saveAuth(pk, 'bunker')
       await fetchUserData(pk)
     } catch (e: any) {
@@ -225,111 +263,49 @@ export function useNostr(): [NostrState, NostrActions] {
   }, [])
 
   // Login with QR code (NIP-46 client-initiated nostrconnect://)
-  // Simplified: let BunkerSigner.fromURI handle EVERYTHING — subscription, decryption, handshake.
-  // We just generate the URI, show it as QR, and let nostr-tools do the rest.
+  // Uses NDK's NDKNip46Signer — battle-tested NIP-46 implementation used by
+  // nostr-login, Inkwell, and lievik. Handles relay management, NIP-44 decryption,
+  // and session lifecycle properly (unlike nostr-tools BunkerSigner which has
+  // a switchRelays bug that kills the pool).
   const initiateQrLogin = useCallback(async (): Promise<{ uri: string; waitForConnection: () => Promise<void> } | null> => {
     setLoginError(null)
     try {
-      const { generateSecretKey, getPublicKey } = await import('nostr-tools/pure')
-      const clientSk = generateSecretKey()
-      const clientPk = getPublicKey(clientSk)
+      const NDK = await import('@nostr-dev-kit/ndk')
 
-      // relay.nsec.app is unreliable (3s+ latency, frequent publish failures).
-      // nos.lol is fast (130ms publish, 19ms query) and supports kind:24133.
-      // The relay in the nostrconnect:// URI tells the signer where to respond.
-      const connectRelay = 'wss://nos.lol'
-      const secret = Math.random().toString(36).slice(2, 10)
-      const perms = 'sign_event:30023,sign_event:30024,sign_event:27235,sign_event:30001,sign_event:10003,sign_event:1,sign_event:7,sign_event:5,get_public_key'
+      // Use multiple fast relays for resilience
+      const connectRelays = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net']
 
-      // Build the nostrconnect:// URI
-      const uri = `nostrconnect://${clientPk}?relay=${encodeURIComponent(connectRelay)}&secret=${secret}&perms=${encodeURIComponent(perms)}&name=${encodeURIComponent('Samizdat')}&url=${encodeURIComponent(window.location.origin)}`
+      const ndk = new NDK.default({
+        explicitRelayUrls: connectRelays,
+      })
+      await ndk.connect()
 
-      // Store for mobile callback page
-      localStorage.setItem('samizdat_nip46_clientsk', Array.from(clientSk).map(b => b.toString(16).padStart(2, '0')).join(''))
-      localStorage.setItem('samizdat_nip46_secret', secret)
+      const localSigner = NDK.NDKPrivateKeySigner.generate()
+      const nip46signer: any = new NDK.NDKNip46Signer(ndk, undefined as any, localSigner)
+      nip46signer.nostrconnectFlowInit({
+        name: 'Samizdat',
+        url: window.location.origin,
+        perms: 'sign_event:30023,sign_event:30024,sign_event:27235,sign_event:30001,sign_event:10003,sign_event:1,sign_event:7,sign_event:5,get_public_key',
+      })
+
+      const uri = nip46signer.nostrConnectUri!
+      console.log('[NIP-46] NDK nostrconnect URI generated')
 
       setIsLoggingIn(true)
 
       const waitForConnection = async () => {
         try {
-          const { BunkerSigner } = await import('nostr-tools/nip46')
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-
-          let signerPubkey: string
-
-          if (isMobile) {
-            // MOBILE: The tab gets backgrounded when user switches to Amber/signer,
-            // killing WebSocket connections. Instead of a live subscription, we
-            // poll for the signer's response after the user returns.
-            const { SimplePool } = await import('nostr-tools/pool')
-            console.log('[NIP-46] Mobile: polling for signer response on', connectRelay)
-
-            signerPubkey = await new Promise<string>((resolve, reject) => {
-              const timeout = setTimeout(() => reject(new Error('Timed out waiting for signer (120s)')), 120000)
-
-              // Poll every 3 seconds — query for existing kind:24133 events
-              const poll = async () => {
-                try {
-                  const pool = new SimplePool()
-                  const events = await pool.querySync([connectRelay], {
-                    kinds: [24133], '#p': [clientPk],
-                  })
-                  pool.close([connectRelay])
-
-                  for (const event of events) {
-                    try {
-                      const { decrypt, getConversationKey } = await import('nostr-tools/nip44')
-                      const ck = getConversationKey(clientSk, event.pubkey)
-                      const parsed = JSON.parse(decrypt(event.content, ck))
-                      if (parsed.result === secret || parsed.result === 'ack') {
-                        clearTimeout(timeout)
-                        console.log('[NIP-46] Mobile: found signer response from', event.pubkey.slice(0, 12))
-                        resolve(event.pubkey)
-                        return
-                      }
-                    } catch {
-                      try {
-                        const nip04 = await import('nostr-tools/nip04')
-                        const parsed = JSON.parse(await nip04.decrypt(clientSk, event.pubkey, event.content))
-                        if (parsed.result === secret || parsed.result === 'ack') {
-                          clearTimeout(timeout)
-                          resolve(event.pubkey)
-                          return
-                        }
-                      } catch {}
-                    }
-                  }
-                } catch (e) {
-                  console.warn('[NIP-46] Poll error:', e)
-                }
-                // Try again in 3s
-                setTimeout(poll, 3000)
-              }
-              poll()
-            })
-          } else {
-            // DESKTOP: Tab stays active, use fromURI with live subscription
-            console.log('[NIP-46] Desktop: waiting for signer via fromURI on', connectRelay)
-            const signer = await BunkerSigner.fromURI(clientSk, uri, {}, 120000)
-            signerPubkey = (signer as any).bp?.pubkey
-            console.log('[NIP-46] Signer pubkey:', signerPubkey?.slice(0, 12) + '...')
-            try { signer.close() } catch {}
-          }
-
-          // Create a fresh BunkerSigner with a clean pool
-          const freshSigner = BunkerSigner.fromBunker(clientSk, {
-            pubkey: signerPubkey,
-            relays: [connectRelay],
-            secret: secret,
-          })
-          await new Promise(r => setTimeout(r, 2000))
-          console.log('[NIP-46] Fresh signer ready, calling getPublicKey...')
-          const pk = await Promise.race([
-            freshSigner.getPublicKey(),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getPublicKey timeout (60s)')), 60000))
+          console.log('[NIP-46] Waiting for signer via NDK on', connectRelays.join(', '))
+          const user = await Promise.race([
+            nip46signer.blockUntilReadyNostrConnect(),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timed out waiting for signer (120s)')), 120000))
           ])
+
+          const pk = user.pubkey
           console.log('[NIP-46] Got public key:', pk.slice(0, 12) + '...')
-          bunkerSignerRef.current = freshSigner
+
+          bunkerSignerRef.current = makeNdkSignerWrapper(nip46signer, ndk, pk)
+
           saveAuth(pk, 'bunker')
           await fetchUserData(pk)
         } catch (e: any) {
