@@ -103,7 +103,7 @@ export function ArticleReader() {
     } finally {
       setIsCommenting(false)
     }
-  }, [commentText, article])
+  }, [commentText])
 
   // Compute derived state (must be after hooks, before returns)
   const zapGateAmount = article?.zapGate
