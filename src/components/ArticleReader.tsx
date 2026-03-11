@@ -159,10 +159,11 @@ export function ArticleReader() {
     try {
       // Try to fetch the full article from the Samizdat private relay
       const { fetchArticleFromRelay } = await import('../lib/reader')
+      // TEMP: Use local relay for testing while tunnel WebSocket is broken
       const fullArticle = await fetchArticleFromRelay(
         article.pubkey,
         article.slug,
-        'wss://relay.samizdat.press'
+        'ws://127.0.0.1:3365'
       )
 
       if (fullArticle && fullArticle.content.length > article.content.length) {
