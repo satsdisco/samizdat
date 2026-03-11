@@ -140,8 +140,9 @@ export function LoginScreen({
             <>
               <h1>Scan with Signer</h1>
               <p className="login-subtitle">
-                Open your signing app (Amber, Nostrsigner) and scan this QR code
-                to connect securely.
+                Scan with <strong>Amber</strong> or another NIP-46 signer app.
+                <br />
+                <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>Using Primal? Paste your bunker link below instead.</span>
               </p>
 
               <div className="qr-container">
