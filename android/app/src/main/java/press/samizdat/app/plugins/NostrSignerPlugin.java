@@ -19,22 +19,29 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  * Bridges Capacitor JS → native Android intents for communicating
  * with nostr signer apps (Amber, etc.) via the nostrsigner: scheme.
  *
- * Uses startActivityForResult to properly receive results back from
- * the signer app — something WebView's window.open() can't do.
+ * Uses DUAL approach:
+ * 1. startActivityForResult — if the signer returns via setResult(), we get it directly
+ * 2. callbackUrl fallback — the signer opens samizdat://signer-result with the result
+ *    (handled by deep link listener on the JS side)
+ *
+ * Amber checks `callingPackage` first. If it's set (native startActivityForResult),
+ * it returns via setResult(). If null (which can happen with Capacitor's
+ * ActivityResultLauncher), it falls through to callbackUrl.
  */
 @CapacitorPlugin(name = "NostrSigner")
 public class NostrSignerPlugin extends Plugin {
 
-    /**
-     * Get the user's public key from a signer app.
-     * Opens the Android app chooser if multiple signers are installed.
-     */
+    private static final String CALLBACK_URL = "samizdat://signer-result?result=";
+
     @PluginMethod()
     public void getPublicKey(PluginCall call) {
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:"));
         intent.putExtra("type", "get_public_key");
+        // Callback URL as fallback — Amber will use this if callingPackage is null
+        intent.putExtra("callbackUrl", CALLBACK_URL);
+        intent.putExtra("returnType", "signature");
+        intent.putExtra("appName", "Samizdat");
 
-        // Optional: request default permissions
         String permissions = call.getString("permissions", "");
         if (!permissions.isEmpty()) {
             intent.putExtra("permissions", permissions);
@@ -43,14 +50,10 @@ public class NostrSignerPlugin extends Plugin {
         try {
             startActivityForResult(call, intent, "handleSignerResult");
         } catch (Exception e) {
-            call.reject("No signer app found. Install Amber or another NIP-55 compatible signer.", "NO_SIGNER", e);
+            call.reject("No signer app found. Install Amber or another NIP-55 signer.", "NO_SIGNER", e);
         }
     }
 
-    /**
-     * Sign a nostr event.
-     * The event JSON is passed as content in the nostrsigner: URI.
-     */
     @PluginMethod()
     public void signEvent(PluginCall call) {
         String eventJson = call.getString("event", "");
@@ -64,6 +67,9 @@ public class NostrSignerPlugin extends Plugin {
 
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:" + Uri.encode(eventJson)));
         intent.putExtra("type", "sign_event");
+        intent.putExtra("callbackUrl", CALLBACK_URL);
+        intent.putExtra("returnType", "event");
+        intent.putExtra("appName", "Samizdat");
 
         if (!id.isEmpty()) {
             intent.putExtra("id", id);
@@ -72,7 +78,6 @@ public class NostrSignerPlugin extends Plugin {
             intent.putExtra("current_user", currentUser);
         }
 
-        // Set package if we know the signer (avoids chooser on subsequent calls)
         String signerPackage = call.getString("package", "");
         if (!signerPackage.isEmpty()) {
             intent.setPackage(signerPackage);
@@ -85,97 +90,38 @@ public class NostrSignerPlugin extends Plugin {
         }
     }
 
-    /**
-     * NIP-04 encrypt.
-     */
     @PluginMethod()
     public void nip04Encrypt(PluginCall call) {
-        String plaintext = call.getString("plaintext", "");
-        String pubkey = call.getString("pubkey", "");
-        String currentUser = call.getString("currentUser", "");
-
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:" + Uri.encode(plaintext)));
-        intent.putExtra("type", "nip04_encrypt");
-        intent.putExtra("pubkey", pubkey);
-        intent.putExtra("current_user", currentUser);
-
-        String signerPackage = call.getString("package", "");
-        if (!signerPackage.isEmpty()) {
-            intent.setPackage(signerPackage);
-        }
-
-        try {
-            startActivityForResult(call, intent, "handleSignerResult");
-        } catch (Exception e) {
-            call.reject("Failed to open signer app", "SIGNER_ERROR", e);
-        }
+        genericCryptoRequest(call, "nip04_encrypt", "plaintext");
     }
 
-    /**
-     * NIP-04 decrypt.
-     */
     @PluginMethod()
     public void nip04Decrypt(PluginCall call) {
-        String ciphertext = call.getString("ciphertext", "");
-        String pubkey = call.getString("pubkey", "");
-        String currentUser = call.getString("currentUser", "");
-
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:" + Uri.encode(ciphertext)));
-        intent.putExtra("type", "nip04_decrypt");
-        intent.putExtra("pubkey", pubkey);
-        intent.putExtra("current_user", currentUser);
-
-        String signerPackage = call.getString("package", "");
-        if (!signerPackage.isEmpty()) {
-            intent.setPackage(signerPackage);
-        }
-
-        try {
-            startActivityForResult(call, intent, "handleSignerResult");
-        } catch (Exception e) {
-            call.reject("Failed to open signer app", "SIGNER_ERROR", e);
-        }
+        genericCryptoRequest(call, "nip04_decrypt", "ciphertext");
     }
 
-    /**
-     * NIP-44 encrypt.
-     */
     @PluginMethod()
     public void nip44Encrypt(PluginCall call) {
-        String plaintext = call.getString("plaintext", "");
-        String pubkey = call.getString("pubkey", "");
-        String currentUser = call.getString("currentUser", "");
-
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:" + Uri.encode(plaintext)));
-        intent.putExtra("type", "nip44_encrypt");
-        intent.putExtra("pubkey", pubkey);
-        intent.putExtra("current_user", currentUser);
-
-        String signerPackage = call.getString("package", "");
-        if (!signerPackage.isEmpty()) {
-            intent.setPackage(signerPackage);
-        }
-
-        try {
-            startActivityForResult(call, intent, "handleSignerResult");
-        } catch (Exception e) {
-            call.reject("Failed to open signer app", "SIGNER_ERROR", e);
-        }
+        genericCryptoRequest(call, "nip44_encrypt", "plaintext");
     }
 
-    /**
-     * NIP-44 decrypt.
-     */
     @PluginMethod()
     public void nip44Decrypt(PluginCall call) {
-        String ciphertext = call.getString("ciphertext", "");
+        genericCryptoRequest(call, "nip44_decrypt", "ciphertext");
+    }
+
+    private void genericCryptoRequest(PluginCall call, String type, String dataKey) {
+        String data = call.getString(dataKey, "");
         String pubkey = call.getString("pubkey", "");
         String currentUser = call.getString("currentUser", "");
 
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:" + Uri.encode(ciphertext)));
-        intent.putExtra("type", "nip44_decrypt");
-        intent.putExtra("pubkey", pubkey);
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:" + Uri.encode(data)));
+        intent.putExtra("type", type);
+        intent.putExtra("pubKey", pubkey);
         intent.putExtra("current_user", currentUser);
+        intent.putExtra("callbackUrl", CALLBACK_URL);
+        intent.putExtra("returnType", "signature");
+        intent.putExtra("appName", "Samizdat");
 
         String signerPackage = call.getString("package", "");
         if (!signerPackage.isEmpty()) {
@@ -190,8 +136,8 @@ public class NostrSignerPlugin extends Plugin {
     }
 
     /**
-     * Handle the result from the signer app.
-     * All NIP-55 methods return the same structure.
+     * Handle the result from the signer app (path 1: setResult).
+     * If Amber returns via setResult(RESULT_OK, intent), we get it here.
      */
     @ActivityCallback
     private void handleSignerResult(PluginCall call, ActivityResult activityResult) {
@@ -204,31 +150,39 @@ public class NostrSignerPlugin extends Plugin {
 
         Intent data = activityResult.getData();
         if (data == null) {
-            call.reject("No data returned from signer", "NO_DATA");
+            // Might have been handled via callbackUrl instead
+            call.reject("No data returned — check if signer used callback URL", "NO_DATA");
             return;
         }
 
         JSObject result = new JSObject();
 
-        // Result string (pubkey for get_public_key, signature for sign_event, etc.)
+        // Amber sends both "result" and "signature" extras
         String resultStr = data.getStringExtra("result");
+        if (resultStr == null) {
+            resultStr = data.getStringExtra("signature");
+        }
         if (resultStr != null) {
             result.put("result", resultStr);
         }
 
-        // Signer package name (returned on get_public_key)
+        // Check for rejection
+        String rejected = data.getStringExtra("rejected");
+        if (rejected != null) {
+            call.reject("Signer rejected the request", "REJECTED");
+            return;
+        }
+
         String pkg = data.getStringExtra("package");
         if (pkg != null) {
             result.put("package", pkg);
         }
 
-        // Event ID (for sign_event)
         String id = data.getStringExtra("id");
         if (id != null) {
             result.put("id", id);
         }
 
-        // Signed event JSON (for sign_event)
         String event = data.getStringExtra("event");
         if (event != null) {
             result.put("event", event);

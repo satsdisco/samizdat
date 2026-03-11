@@ -18,6 +18,7 @@
 
 import { Capacitor, registerPlugin } from '@capacitor/core'
 
+
 // Type definition for the native plugin
 interface NostrSignerPluginType {
   getPublicKey(options?: { permissions?: string }): Promise<{
@@ -64,6 +65,39 @@ interface NostrSignerPluginType {
 // Register the native plugin
 const NostrSigner = registerPlugin<NostrSignerPluginType>('NostrSigner')
 
+// Pending callback resolver — used when Amber returns via callbackUrl instead of setResult
+let pendingCallbackResolve: ((result: string) => void) | null = null
+let deepLinkListenerInitialized = false
+
+/**
+ * Initialize the deep link listener as a fallback for when Amber uses
+ * the callbackUrl path instead of setResult(). This catches
+ * samizdat://signer-result?result=<value> URLs.
+ */
+export async function initDeepLinkFallback(): Promise<void> {
+  if (deepLinkListenerInitialized || !isNativeAndroid()) return
+  deepLinkListenerInitialized = true
+
+  try {
+    const { App } = await import('@capacitor/app')
+    await App.addListener('appUrlOpen', ({ url }) => {
+      if (!url.startsWith('samizdat://signer-result')) return
+
+      const paramStr = url.includes('?') ? url.split('?').slice(1).join('?') : ''
+      const params = new URLSearchParams(paramStr)
+      const result = params.get('result') || ''
+
+      if (result && pendingCallbackResolve) {
+        const resolve = pendingCallbackResolve
+        pendingCallbackResolve = null
+        resolve(result)
+      }
+    })
+  } catch (e) {
+    console.warn('[AndroidSigner] Deep link fallback init failed:', e)
+  }
+}
+
 /** Check if we're running as a native Android app */
 export function isNativeAndroid(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
@@ -88,20 +122,66 @@ function saveSignerPackage(pkg: string) {
  * Get public key from Android signer.
  * Opens the native app chooser — user picks Amber, Primal, etc.
  * Returns the hex pubkey.
+ *
+ * Uses a dual approach:
+ * 1. Native startActivityForResult — if Amber returns via setResult(), the plugin promise resolves
+ * 2. callbackUrl fallback — if Amber opens samizdat://signer-result?result=<pubkey>, deep link catches it
+ * Whichever fires first wins.
  */
 export async function getPublicKey(): Promise<{ pubkey: string; package?: string }> {
-  const result = await NostrSigner.getPublicKey()
+  // Make sure the deep link fallback is ready
+  await initDeepLinkFallback()
 
-  if (!result.result || !/^[0-9a-f]{64}$/i.test(result.result)) {
-    throw new Error('Invalid public key from signer: ' + (result.result || '(empty)'))
+  // Race: native plugin result vs callback URL deep link
+  const result = await Promise.race([
+    // Path 1: Native setResult (works if callingPackage is set)
+    NostrSigner.getPublicKey().catch((e: any) => {
+      console.warn('[AndroidSigner] Native getPublicKey failed/rejected:', e?.message || e)
+      // Don't throw — let the callback URL path have a chance
+      return null
+    }),
+    // Path 2: Callback URL deep link (fallback if callingPackage is null)
+    new Promise<{ result: string; package?: string }>((resolve) => {
+      pendingCallbackResolve = (pubkey: string) => {
+        resolve({ result: pubkey })
+      }
+      // Timeout after 2 minutes
+      setTimeout(() => {
+        if (pendingCallbackResolve) {
+          pendingCallbackResolve = null
+          // Don't resolve — let native path handle it or both timeout
+        }
+      }, 120000)
+    }),
+  ])
+
+  // Clean up
+  pendingCallbackResolve = null
+
+  if (!result || !result.result) {
+    throw new Error('No response from signer app')
   }
 
-  // Save the signer package so future sign requests skip the chooser
+  // Amber returns npub for web clients (no package), hex for native. Handle both.
+  let pubkey = result.result
+  if (pubkey.startsWith('npub1')) {
+    // Decode bech32 npub to hex
+    const { decode } = await import('nostr-tools/nip19')
+    const decoded = decode(pubkey)
+    if (decoded.type === 'npub') {
+      pubkey = decoded.data
+    }
+  }
+
+  if (!/^[0-9a-f]{64}$/i.test(pubkey)) {
+    throw new Error('Invalid public key from signer: ' + pubkey)
+  }
+
   if (result.package) {
     saveSignerPackage(result.package)
   }
 
-  return { pubkey: result.result, package: result.package }
+  return { pubkey, package: result.package }
 }
 
 /**

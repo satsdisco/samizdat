@@ -30,6 +30,11 @@ export async function initNative(): Promise<void> {
     console.warn('[NativeInit] SplashScreen hide failed:', e)
   }
 
-  // NIP-55 signer plugin is registered natively in MainActivity.java
-  // No JS-side init needed — the plugin uses startActivityForResult
+  // Initialize NIP-55 deep link fallback for signer callback URLs
+  try {
+    const { initDeepLinkFallback } = await import('./androidSigner')
+    await initDeepLinkFallback()
+  } catch (e) {
+    console.warn('[NativeInit] Signer deep link fallback init failed:', e)
+  }
 }
