@@ -41,7 +41,7 @@ export function AuthCallback() {
         const { getPublicKey } = await import('nostr-tools/pure')
 
         const clientPk = getPublicKey(clientSk)
-        const connectRelays = ['wss://relay.nsec.app']
+        const connectRelays = ['wss://nos.lol']
         const pool = new SimplePool()
 
         addDebug(`clientPk: ${clientPk.slice(0, 12)}...`)

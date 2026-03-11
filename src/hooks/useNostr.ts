@@ -234,7 +234,10 @@ export function useNostr(): [NostrState, NostrActions] {
       const clientSk = generateSecretKey()
       const clientPk = getPublicKey(clientSk)
 
-      const connectRelay = 'wss://relay.nsec.app'
+      // relay.nsec.app is unreliable (3s+ latency, frequent publish failures).
+      // nos.lol is fast (130ms publish, 19ms query) and supports kind:24133.
+      // The relay in the nostrconnect:// URI tells the signer where to respond.
+      const connectRelay = 'wss://nos.lol'
       const secret = Math.random().toString(36).slice(2, 10)
       const perms = 'sign_event:30023,sign_event:30024,sign_event:27235,sign_event:30001,sign_event:10003,sign_event:1,sign_event:7,sign_event:5,get_public_key'
 
