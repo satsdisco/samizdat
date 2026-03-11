@@ -554,6 +554,7 @@
 @media (max-width: 640px) {
   .titlebar {
     padding: 0.4rem 0.8rem;
+    padding-top: calc(0.4rem + env(safe-area-inset-top, 0px));
     gap: 0.3rem;
   }
 

@@ -14,10 +14,11 @@ export async function initNative(): Promise<void> {
 
   try {
     const { StatusBar, Style } = await import('@capacitor/status-bar')
-    // Dark status bar icons on our dark #0a0a0a background
-    await StatusBar.setStyle({ style: Style.Dark })
-    await StatusBar.setBackgroundColor({ color: '#0a0a0a' })
-    await StatusBar.setOverlaysWebView({ overlay: false })
+    // Overlay mode: status bar overlaps WebView, CSS env(safe-area-inset-top) gives real height
+    await StatusBar.setOverlaysWebView({ overlay: true })
+    // Light style = dark icons (for light editor/press backgrounds)
+    await StatusBar.setStyle({ style: Style.Light })
+    await StatusBar.setBackgroundColor({ color: '#00000000' })
   } catch (e) {
     console.warn('[NativeInit] StatusBar setup failed:', e)
   }
