@@ -39,7 +39,7 @@ function makeNdkSignerWrapper(nip46signer: any, ndk: any, pk: string) {
 
 export type AuthMethod = 'extension' | 'bunker' | 'nsec' | 'android-signer' | null
 
-interface NostrState {
+export interface NostrState {
   // Auth
   pubkey: string | null
   npub: string | null

@@ -1,0 +1,225 @@
+.settings-page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  padding-top: calc(0.8rem + env(safe-area-inset-top, 0px));
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.settings-back {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-back:active {
+  background: var(--bg-secondary);
+}
+
+.settings-title {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+/* Profile card */
+.settings-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.settings-avatar-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-size: 1.2rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.settings-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.settings-name {
+  font-family: var(--font-ui);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.settings-nip05 {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.settings-npub {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+
+/* Sections */
+.settings-section {
+  padding: 0.5rem 0;
+}
+
+.settings-section-title {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  padding: 0.75rem 1.25rem 0.4rem;
+}
+
+/* Row items */
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  background: none;
+  border: none;
+  font-family: var(--font-ui);
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-row:active {
+  background: var(--bg-secondary);
+}
+
+.settings-row-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.settings-row-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.settings-row-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.settings-row-sub {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-row-chevron {
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+/* Info rows (non-interactive) */
+.settings-row-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1.25rem;
+}
+
+.settings-row-info-label {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.settings-row-info-value {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--text-faint);
+}
+
+/* Sign out button */
+.settings-signout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: calc(100% - 2.5rem);
+  margin: 0.75rem 1.25rem;
+  padding: 0.9rem;
+  background: none;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-signout:active {
+  background: rgba(192, 57, 43, 0.08);
+}

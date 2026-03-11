@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import type { RelayInfo } from '../types/nostr'
 import './TitleBar.css'
@@ -46,6 +46,8 @@ export function TitleBar({
   onRelayRemove,
   onToggleSidebar,
 }: TitleBarProps) {
+  const navigate = useNavigate()
+  const isNative = Capacitor.isNativePlatform()
   const [showRelays, setShowRelays] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [newRelayUrl, setNewRelayUrl] = useState('')
@@ -211,7 +213,13 @@ export function TitleBar({
             </button>
 
             <div className="user-menu-wrapper" ref={userMenuRef}>
-              <button className="user-btn" onClick={() => setShowUserMenu(!showUserMenu)}>
+              <button className="user-btn" onClick={() => {
+                if (isNative) {
+                  navigate('/settings')
+                } else {
+                  setShowUserMenu(!showUserMenu)
+                }
+              }}>
                 {profile?.picture ? (
                   <img src={profile.picture} alt="" className="user-avatar" />
                 ) : (
@@ -219,7 +227,7 @@ export function TitleBar({
                 )}
               </button>
 
-              {showUserMenu && (
+              {!isNative && showUserMenu && (
                 <>
                 <div className="user-menu-backdrop" onClick={() => setShowUserMenu(false)} />
                 <div className="user-menu">

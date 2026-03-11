@@ -15,6 +15,7 @@ import { Preview } from './components/Preview'
 import { LoginScreen } from './components/LoginScreen'
 import { Landing } from './components/Landing'
 import { AuthCallback } from './components/AuthCallback'
+import { Settings } from './components/Settings'
 import { useNostr } from './hooks/useNostr'
 import type { Article } from './types/nostr'
 import './styles/theme.css'
@@ -265,13 +266,13 @@ function App() {
 
   return (
     <BrowserRouter>
-      <AppRoutes editorView={editorView} />
+      <AppRoutes editorView={editorView} nostr={nostr} actions={actions} />
     </BrowserRouter>
   )
 }
 
 // Separate component so useDeepLinks/useBackButton (which need useNavigate) are inside BrowserRouter
-function AppRoutes({ editorView }: { editorView: () => React.ReactNode }) {
+function AppRoutes({ editorView, nostr, actions }: { editorView: () => React.ReactNode; nostr: any; actions: any }) {
   useDeepLinks()
   useBackButton()
 
@@ -284,6 +285,14 @@ function AppRoutes({ editorView }: { editorView: () => React.ReactNode }) {
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/a/:naddr" element={<ArticleReader />} />
       <Route path="/read" element={<Press />} />
+      <Route path="/settings" element={
+        <Settings
+          profile={nostr.profile}
+          pubkey={nostr.pubkey}
+          authMethod={nostr.authMethod}
+          onLogout={actions.logout}
+        />
+      } />
       <Route path="/write" element={editorView()} />
       {isNative ? (
         <Route path="*" element={<Press />} />
