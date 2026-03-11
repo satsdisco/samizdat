@@ -272,8 +272,9 @@ export function useNostr(): [NostrState, NostrActions] {
     try {
       const NDK = await import('@nostr-dev-kit/ndk')
 
-      // Use multiple fast relays for resilience
-      const connectRelays = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net']
+      // relay.nsec.app MUST be included — Primal and other signers only listen there.
+      // Also include fast relays for Amber and others that respect the URI relays.
+      const connectRelays = ['wss://relay.nsec.app', 'wss://relay.damus.io', 'wss://relay.primal.net']
 
       const ndk = new NDK.default({
         explicitRelayUrls: connectRelays,
@@ -282,14 +283,18 @@ export function useNostr(): [NostrState, NostrActions] {
 
       const localSigner = NDK.NDKPrivateKeySigner.generate()
       const nip46signer: any = new NDK.NDKNip46Signer(ndk, undefined as any, localSigner)
-      nip46signer.nostrconnectFlowInit({
-        name: 'Samizdat',
-        url: window.location.origin,
-        perms: 'sign_event:30023,sign_event:30024,sign_event:27235,sign_event:30001,sign_event:10003,sign_event:1,sign_event:7,sign_event:5,get_public_key',
-      })
 
-      const uri = nip46signer.nostrConnectUri!
-      console.log('[NIP-46] NDK nostrconnect URI generated')
+      // NDK's nostrconnectFlowInit only puts the FIRST relay in the URI.
+      // Primal needs relay.nsec.app in the URI. Build URI ourselves with all relays.
+      const secret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+        .map(b => b.toString(16).padStart(2, '0')).join('')
+      nip46signer.nostrConnectSecret = secret
+      const localPubkey = localSigner.pubkey
+
+      const relayParams = connectRelays.map(r => `relay=${encodeURIComponent(r)}`).join('&')
+      const uri = `nostrconnect://${localPubkey}?${relayParams}&secret=${secret}&name=${encodeURIComponent('Samizdat')}`
+      nip46signer.nostrConnectUri = uri
+      console.log('[NIP-46] NDK nostrconnect URI generated with', connectRelays.length, 'relays')
 
       setIsLoggingIn(true)
 
