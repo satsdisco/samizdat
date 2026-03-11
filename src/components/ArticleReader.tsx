@@ -109,6 +109,15 @@ export function ArticleReader() {
   const zapGateAmount = article?.zapGate
   const previewEnd = article?.previewEnd
   const isGated = !!zapGateAmount && !!previewEnd
+  
+  // TEMP: Debug zap gate detection
+  console.log('DEBUG zap gate:', { 
+    zapGateAmount, 
+    previewEnd, 
+    isGated,
+    articleTitle: article?.title,
+    fullArticle: article 
+  })
 
   let bodyHtml = ''
   let isUnlocked = false
@@ -117,6 +126,9 @@ export function ArticleReader() {
     if (isGated) {
       const zapKey = `samizdat_zapped_${article.id}`
       isUnlocked = !!localStorage.getItem(zapKey)
+      
+      // TEMP: Debug unlock state
+      console.log('DEBUG unlock:', { zapKey, isUnlocked, localStorage: localStorage.getItem(zapKey) })
 
       if (isUnlocked) {
         bodyHtml = markdownToHtml(article.content)
