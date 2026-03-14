@@ -41,11 +41,11 @@ export async function findZapReceipts(config: ZapVerificationConfig): Promise<Za
     for (const receipt of zapReceipts) {
       try {
         // Parse bolt11 invoice from receipt
-        const bolt11Tag = receipt.tags.find(tag => tag[0] === 'bolt11')
+        const bolt11Tag = receipt.tags.find((tag: string[]) => tag[0] === 'bolt11')
         if (!bolt11Tag?.[1]) continue
 
         // Parse zap request from receipt  
-        const descriptionTag = receipt.tags.find(tag => tag[0] === 'description')
+        const descriptionTag = receipt.tags.find((tag: string[]) => tag[0] === 'description')
         if (!descriptionTag?.[1]) continue
 
         const zapRequest = JSON.parse(descriptionTag[1])

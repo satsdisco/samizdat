@@ -30,11 +30,11 @@ export function useAutoZapVerification(
     lastCheckTime: null
   })
 
-  const intervalRef = useRef<NodeJS.Timeout>()
+  const intervalRef = useRef<number | undefined>(undefined)
   const lastFocusTime = useRef<number>(Date.now())
 
   // Check for zaps
-  const checkForZaps = useCallback(async (isManual = false) => {
+  const checkForZaps = useCallback(async () => {
     if (!options.enabled || state.isUnlocked) return
 
     setState(prev => ({ ...prev, isVerifying: true, error: null }))
@@ -91,7 +91,7 @@ export function useAutoZapVerification(
       // Only check if user was away for >10 seconds (likely went to wallet)
       if (timeSinceFocus > 10000) {
         console.log('🔍 Page focused after being away - checking for zaps...')
-        checkForZaps(true)
+        checkForZaps()
       }
       
       lastFocusTime.current = now
@@ -114,30 +114,30 @@ export function useAutoZapVerification(
   useEffect(() => {
     if (!options.enabled || state.isUnlocked) {
       if (intervalRef.current) {
-        clearInterval(intervalRef.current)
+        window.clearInterval(intervalRef.current)
       }
       return
     }
 
     const interval = options.checkInterval || 30000 // default 30s
     
-    intervalRef.current = setInterval(() => {
-      checkForZaps(false)
+    intervalRef.current = window.setInterval(() => {
+      checkForZaps()
     }, interval)
 
     // Initial check
-    checkForZaps(false)
+    checkForZaps()
 
     return () => {
       if (intervalRef.current) {
-        clearInterval(intervalRef.current)
+        window.clearInterval(intervalRef.current)
       }
     }
   }, [checkForZaps, options.enabled, options.checkInterval, state.isUnlocked])
 
   // Manual verification trigger
   const manualCheck = useCallback(() => {
-    checkForZaps(true)
+    checkForZaps()
   }, [checkForZaps])
 
   return {
