@@ -34,7 +34,10 @@ export function ArticleReader() {
   const [commentText, setCommentText] = useState('')
   const [isCommenting, setIsCommenting] = useState(false)
   const [unlocking, setUnlocking] = useState(false)
+  const [forceUnlocked, setForceUnlocked] = useState(false)
   const loadingMsg = useLoadingMessage()
+  
+
 
   useEffect(() => {
     if (!naddr) return
@@ -118,7 +121,8 @@ export function ArticleReader() {
   if (article) {
     if (isGated) {
       const zapKey = `samizdat_zapped_${article.id}`
-      isUnlocked = !!localStorage.getItem(zapKey)
+      isUnlocked = !!localStorage.getItem(zapKey) || forceUnlocked
+
       
       // Unlock state detection working ✅
 
@@ -163,18 +167,17 @@ export function ArticleReader() {
     try {
       // Try to fetch the full article from the Samizdat private relay
       const { fetchArticleFromRelay } = await import('../lib/reader')
-      // TEMP: Use local relay for testing while tunnel WebSocket is broken
       const fullArticle = await fetchArticleFromRelay(
         article.pubkey,
         article.slug,
-        'ws://127.0.0.1:3365'
+        'wss://relay.samizdat.press'
       )
-
       if (fullArticle && fullArticle.content.length > article.content.length) {
         // Got the full content — save unlock state and reload with full content
         const zapKey = `samizdat_zapped_${article.id}`
         localStorage.setItem(zapKey, '1')
         setArticle(fullArticle)
+        setForceUnlocked(true)
       } else {
         // Fallback: honor system unlock
         const zapKey = `samizdat_zapped_${article.id}`
