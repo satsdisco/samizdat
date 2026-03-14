@@ -35,7 +35,7 @@ export function useAutoZapVerification(
 
   // Check for zaps
   const checkForZaps = useCallback(async () => {
-    if (!options.enabled || state.isUnlocked) return
+    if (!options.enabled || state.isUnlocked || state.isVerifying) return
 
     setState(prev => ({ ...prev, isVerifying: true, error: null }))
 
@@ -88,8 +88,8 @@ export function useAutoZapVerification(
       const now = Date.now()
       const timeSinceFocus = now - lastFocusTime.current
       
-      // Only check if user was away for >10 seconds (likely went to wallet)
-      if (timeSinceFocus > 10000) {
+      // Only check if user was away for >30 seconds (likely went to wallet)
+      if (timeSinceFocus > 30000) {
         console.log('🔍 Page focused after being away - checking for zaps...')
         checkForZaps()
       }
@@ -110,7 +110,7 @@ export function useAutoZapVerification(
     }
   }, [checkForZaps, options.enabled])
 
-  // Periodic background checking
+  // Periodic background checking (disabled by default to prevent flashing)
   useEffect(() => {
     if (!options.enabled || state.isUnlocked) {
       if (intervalRef.current) {
@@ -119,14 +119,17 @@ export function useAutoZapVerification(
       return
     }
 
-    const interval = options.checkInterval || 30000 // default 30s
+    // Only enable background checking if explicitly requested
+    // For now, rely on focus detection and manual checks only
+    const enableBackgroundCheck = false // TODO: make this configurable
     
-    intervalRef.current = window.setInterval(() => {
-      checkForZaps()
-    }, interval)
-
-    // Initial check
-    checkForZaps()
+    if (enableBackgroundCheck) {
+      const interval = options.checkInterval || 60000 // default 60s
+      
+      intervalRef.current = window.setInterval(() => {
+        checkForZaps()
+      }, interval)
+    }
 
     return () => {
       if (intervalRef.current) {

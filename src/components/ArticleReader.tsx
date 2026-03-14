@@ -48,11 +48,10 @@ export function ArticleReader() {
     {
       enabled: !!article?.zapGate && !forceUnlocked,
       readerPubkey: undefined, // TODO: get from current user session
-      checkInterval: 20000, // check every 20 seconds
+      checkInterval: 60000, // check every 60 seconds (less aggressive)
       onUnlock: () => {
         console.log('🎉 Auto-unlocked via zap verification!')
         setForceUnlocked(true)
-        // Also fetch full content
         handleUnlock()
       }
     }
@@ -280,21 +279,58 @@ export function ArticleReader() {
               
               {author?.lud16 && (
                 <div className="paywall-zap-section">
-                  <a
-                    href={`lightning:${author.lud16}`}
+                  <button
                     className="paywall-zap-button"
+                    onClick={() => {
+                      // Try to open lightning wallet
+                      const lightningUrl = `lightning:${author.lud16}?amount=${(zapGateAmount || 21) * 1000}&comment=Zap%20for%20article%20unlock`
+                      
+                      // For mobile - try to open lightning URL
+                      if (Capacitor.isNativePlatform()) {
+                        window.open(lightningUrl, '_system')
+                      } else {
+                        // For web - try lightning URL, fallback to copy
+                        const linkEl = document.createElement('a')
+                        linkEl.href = lightningUrl
+                        linkEl.click()
+                        
+                        // Also copy to clipboard as fallback
+                        navigator.clipboard?.writeText(author.lud16).catch(() => {
+                          // Fallback: show address in alert
+                          alert(`Lightning Address: ${author.lud16}\n\nZap ${zapGateAmount || 21} sats to unlock this article.`)
+                        })
+                      }
+                    }}
                     title={`Zap ${author.name || 'author'} ${zapGateAmount} sats`}
                   >
                     ⚡ Zap {zapGateAmount} sats
-                  </a>
+                  </button>
+                  
+                  <div className="paywall-address">
+                    <code>{author.lud16}</code>
+                    <button 
+                      className="copy-btn"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(author.lud16).then(() => {
+                          // TODO: show toast
+                          alert('Lightning address copied!')
+                        }).catch(() => {
+                          alert(`Lightning Address: ${author.lud16}`)
+                        })
+                      }}
+                    >
+                      📋
+                    </button>
+                  </div>
+                  
                   <p className="paywall-hint">
-                    Tap to zap, then return here — the article will unlock automatically!
+                    Zap {zapGateAmount} sats, then return here — the article will unlock automatically!
                   </p>
                 </div>
               )}
 
-              {/* Auto-verification status */}
-              {zapVerification.isVerifying && (
+              {/* Auto-verification status - only show during manual checks */}
+              {zapVerification.isVerifying && zapVerification.lastCheckTime && (
                 <div className="paywall-verification">
                   <div className="verification-spinner"></div>
                   <span>Checking for zap receipt...</span>
