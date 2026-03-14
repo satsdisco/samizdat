@@ -295,10 +295,12 @@ export function ArticleReader() {
                         linkEl.click()
                         
                         // Also copy to clipboard as fallback
-                        navigator.clipboard?.writeText(author.lud16).catch(() => {
-                          // Fallback: show address in alert
-                          alert(`Lightning Address: ${author.lud16}\n\nZap ${zapGateAmount || 21} sats to unlock this article.`)
-                        })
+                        if (author.lud16) {
+                          navigator.clipboard?.writeText(author.lud16).catch(() => {
+                            // Fallback: show address in alert
+                            alert(`Lightning Address: ${author.lud16}\n\nZap ${zapGateAmount || 21} sats to unlock this article.`)
+                          })
+                        }
                       }
                     }}
                     title={`Zap ${author.name || 'author'} ${zapGateAmount} sats`}
@@ -311,12 +313,14 @@ export function ArticleReader() {
                     <button 
                       className="copy-btn"
                       onClick={() => {
-                        navigator.clipboard?.writeText(author.lud16).then(() => {
-                          // TODO: show toast
-                          alert('Lightning address copied!')
-                        }).catch(() => {
-                          alert(`Lightning Address: ${author.lud16}`)
-                        })
+                        if (author.lud16) {
+                          navigator.clipboard?.writeText(author.lud16).then(() => {
+                            // TODO: show toast
+                            alert('Lightning address copied!')
+                          }).catch(() => {
+                            alert(`Lightning Address: ${author.lud16}`)
+                          })
+                        }
                       }}
                     >
                       📋
