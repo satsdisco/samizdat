@@ -5,6 +5,7 @@ import { markdownToHtml } from '../lib/markdown'
 import { fetchArticleByNaddr, fetchProfile, fetchComments, type ArticleData, type CommentData } from '../lib/reader'
 import { DEFAULT_RELAYS } from '../lib/nostr'
 import { useLoadingMessage } from '../hooks/useLoadingMessage'
+import { useAutoZapVerification } from '../hooks/useAutoZapVerification'
 import './ArticleReader.css'
 
 function timeAgo(ts: number): string {
@@ -36,6 +37,26 @@ export function ArticleReader() {
   const [unlocking, setUnlocking] = useState(false)
   const [forceUnlocked, setForceUnlocked] = useState(false)
   const loadingMsg = useLoadingMessage()
+
+  // Auto-verification for seamless zap experience
+  const zapVerification = useAutoZapVerification(
+    {
+      authorPubkey: article?.pubkey || '',
+      articleEventId: article?.id || '',
+      zapAmount: article?.zapGate || 21
+    },
+    {
+      enabled: !!article?.zapGate && !forceUnlocked,
+      readerPubkey: undefined, // TODO: get from current user session
+      checkInterval: 20000, // check every 20 seconds
+      onUnlock: () => {
+        console.log('🎉 Auto-unlocked via zap verification!')
+        setForceUnlocked(true)
+        // Also fetch full content
+        handleUnlock()
+      }
+    }
+  )
   
 
 
@@ -256,18 +277,58 @@ export function ArticleReader() {
               <span className="paywall-icon">⚡</span>
               <h3>This article is zap-gated</h3>
               <p>The author requires a zap of <strong>{zapGateAmount} sats</strong> to read the full article.</p>
-              {author?.nip05 && (
-                <p className="paywall-hint">
-                  Zap {author.name || 'the author'} via your favorite nostr client, then unlock below.
-                </p>
+              
+              {author?.lud16 && (
+                <div className="paywall-zap-section">
+                  <a
+                    href={`lightning:${author.lud16}`}
+                    className="paywall-zap-button"
+                    title={`Zap ${author.name || 'author'} ${zapGateAmount} sats`}
+                  >
+                    ⚡ Zap {zapGateAmount} sats
+                  </a>
+                  <p className="paywall-hint">
+                    Tap to zap, then return here — the article will unlock automatically!
+                  </p>
+                </div>
               )}
+
+              {/* Auto-verification status */}
+              {zapVerification.isVerifying && (
+                <div className="paywall-verification">
+                  <div className="verification-spinner"></div>
+                  <span>Checking for zap receipt...</span>
+                </div>
+              )}
+
+              {zapVerification.error && (
+                <div className="paywall-error">
+                  <span>⚠️ Verification error: {zapVerification.error}</span>
+                </div>
+              )}
+
+              {/* Fallback manual unlock */}
               <div className="paywall-actions">
-                <button className="paywall-unlock" onClick={handleUnlock} disabled={unlocking}>
-                  {unlocking ? 'Checking…' : "I've zapped — unlock article"}
+                <button 
+                  className="paywall-unlock secondary" 
+                  onClick={handleUnlock} 
+                  disabled={unlocking || zapVerification.isVerifying}
+                >
+                  {unlocking ? 'Checking…' : 'Manual unlock'}
                 </button>
+                {zapVerification.lastCheckTime && (
+                  <button 
+                    className="paywall-recheck" 
+                    onClick={zapVerification.manualCheck}
+                    disabled={zapVerification.isVerifying}
+                  >
+                    ↻ Check again
+                  </button>
+                )}
               </div>
+
               <p className="paywall-note">
-                MVP: Honor system. Future versions will verify zap receipts automatically.
+                ✨ Auto-verification enabled — zap and return for instant unlock!
               </p>
             </div>
           </div>
