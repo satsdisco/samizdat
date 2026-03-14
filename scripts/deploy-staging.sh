@@ -18,7 +18,12 @@ echo "📦 Building..."
 npm run build
 
 echo "🚀 Deploying to Vercel staging..."
-vercel --config vercel-staging.json
+# Copy staging config temporarily
+cp vercel-staging.json vercel.json.backup 2>/dev/null || true
+cp vercel-staging.json vercel.json
+vercel
+# Restore original config
+mv vercel.json.backup vercel.json 2>/dev/null || true
 
 echo "✅ Staging deployment complete!"
 echo "🔗 Test at: https://samizdat-staging.vercel.app"
