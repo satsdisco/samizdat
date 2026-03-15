@@ -85,7 +85,12 @@ export async function initDeepLinkFallback(): Promise<void> {
 
       const paramStr = url.includes('?') ? url.split('?').slice(1).join('?') : ''
       const params = new URLSearchParams(paramStr)
-      const result = params.get('result') || ''
+      let result = params.get('result') || ''
+
+      // Amber may double-encode — try decoding once more if it looks encoded
+      if (result && result.includes('%')) {
+        try { result = decodeURIComponent(result) } catch { /* use as-is */ }
+      }
 
       if (result && pendingCallbackResolve) {
         const resolve = pendingCallbackResolve
@@ -186,25 +191,67 @@ export async function getPublicKey(): Promise<{ pubkey: string; package?: string
 
 /**
  * Sign a nostr event using the Android signer.
- * If we know the signer package, it opens directly. Otherwise shows chooser.
+ *
+ * Uses the same dual race as getPublicKey:
+ * - Path 1: native startActivityForResult result (if Amber prompts user)
+ * - Path 2: callbackUrl deep link (if Amber auto-approves via saved permissions)
+ *
+ * Amber auto-approves when user previously granted "Always" for sign_event,
+ * which means it skips the prompt and returns via callbackUrl immediately.
  */
 export async function signEvent(eventJson: string, pubkey: string): Promise<{ signature: string; signedEvent?: string }> {
+  await initDeepLinkFallback()
+
   const pkg = getSignerPackage()
+  const id = (() => { try { return JSON.parse(eventJson).id || 'samizdat-sign' } catch { return 'samizdat-sign' } })()
 
-  const result = await NostrSigner.signEvent({
-    event: eventJson,
-    // Pass current_user as npub if possible — Amber uses it for account switching
-    currentUser: pubkey,
-    // id is required as an extra — use empty string if not in event yet
-    id: (() => { try { return JSON.parse(eventJson).id || 'samizdat-sign' } catch { return 'samizdat-sign' } })(),
-    // Always include package if known — goes directly to Amber without chooser
-    ...(pkg ? { package: pkg } : {}),
-  })
+  const pluginResult = await Promise.race([
+    // Path 1: native setResult (user sees approval screen, taps approve)
+    NostrSigner.signEvent({
+      event: eventJson,
+      currentUser: pubkey,
+      id,
+      ...(pkg ? { package: pkg } : {}),
+    }).catch((e: any) => {
+      console.warn('[AndroidSigner] signEvent native result failed:', e?.message || e)
+      return null
+    }),
+    // Path 2: callbackUrl deep link (Amber auto-approved, returned via URL)
+    new Promise<{ result: string; package?: string }>((resolve) => {
+      pendingCallbackResolve = (data: string) => resolve({ result: data })
+      // Timeout after 3 minutes
+      setTimeout(() => { pendingCallbackResolve = null }, 180000)
+    }),
+  ])
 
-  return {
-    signature: result.result,
-    signedEvent: result.event,
+  pendingCallbackResolve = null
+
+  if (!pluginResult || !pluginResult.result) {
+    throw new Error('No response from signer — timed out or cancelled')
   }
+
+  // For sign_event with returnType=event, Amber returns the full signed event JSON
+  // via either result.event (native path) or result.result (callback URL path)
+  const nativeEvent = (pluginResult as any).event
+  if (nativeEvent) {
+    // Native path: event field has the full signed event
+    try {
+      return { signature: JSON.parse(nativeEvent).sig || '', signedEvent: nativeEvent }
+    } catch { /* fall through */ }
+  }
+
+  // Callback URL path: result contains the full signed event JSON or just a signature
+  const resultData = pluginResult.result
+  if (resultData.startsWith('{')) {
+    // Full event JSON returned
+    try {
+      const parsed = JSON.parse(resultData)
+      return { signature: parsed.sig || '', signedEvent: resultData }
+    } catch { /* fall through */ }
+  }
+
+  // Just a signature string
+  return { signature: resultData }
 }
 
 /**
