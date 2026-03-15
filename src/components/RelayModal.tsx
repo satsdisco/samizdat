@@ -30,8 +30,9 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
   const readCount = relays.filter(r => r.read).length
 
   const modal = (
-    <div className={`relay-modal-overlay ${isNative ? 'native' : ''}`} onClick={onClose}>
-      <div className={`relay-modal ${isNative ? 'native' : ''}`} onClick={e => e.stopPropagation()}>
+    <>
+    <div className="relay-modal-backdrop" onClick={onClose} />
+    <div className={`relay-modal ${isNative ? 'native' : ''}`}>
 
         {/* Handle bar (native only) */}
         {isNative && <div className="relay-modal-handle" />}
@@ -86,6 +87,7 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
         </form>
       </div>
     </div>
+    </>
   )
 
   return createPortal(modal, document.body)
