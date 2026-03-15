@@ -392,3 +392,18 @@
     padding-left: 0.5rem;
   }
 }
+
+/* Native Android: bottom sheet */
+.is-native-android .modal-overlay {
+  align-items: flex-end !important;
+}
+
+.is-native-android .modal {
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: 88vh !important;
+  margin: 0 !important;
+  border-radius: 16px 16px 0 0 !important;
+  border-bottom: none !important;
+  padding-bottom: 16px !important;
+}

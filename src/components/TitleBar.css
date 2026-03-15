@@ -695,3 +695,31 @@
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
   }
 }
+
+/* Native Android overrides — bypass breakpoint issues */
+.is-native-android .relay-dropdown {
+  position: fixed !important;
+  top: auto !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 12px 12px 0 0 !important;
+  max-height: 70vh !important;
+  border-bottom: none !important;
+  z-index: 1000 !important;
+}
+
+.is-native-android .user-menu {
+  position: fixed !important;
+  top: auto !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 16px 16px 0 0 !important;
+  border-bottom: none !important;
+  z-index: 1000 !important;
+}

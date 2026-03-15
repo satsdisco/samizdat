@@ -12,6 +12,9 @@ import { Capacitor } from '@capacitor/core'
 export async function initNative(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
 
+  // Add class so CSS can target native-only styles without breakpoint guessing
+  document.body.classList.add('is-native-android')
+
   try {
     const { StatusBar, Style } = await import('@capacitor/status-bar')
     // Overlay mode: status bar overlaps WebView, CSS env(safe-area-inset-top) gives real height

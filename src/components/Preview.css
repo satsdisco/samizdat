@@ -19,8 +19,8 @@
      env(safe-area-inset-top) should give the real value when overlay mode is on,
      but we clamp to at least 48px so the toolbar is always touchable. */
   padding: 0.75rem 1rem;
-  /* 56px gives comfortable clearance on all Android status bar heights (24-48px) */
-  padding-top: 56px;
+  /* 72px clears the tallest Android status bars (up to ~56dp on some devices) */
+  padding-top: 72px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(8px);
