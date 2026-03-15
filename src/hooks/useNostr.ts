@@ -398,6 +398,19 @@ export function useNostr(): [NostrState, NostrActions] {
     } else if (authMethod === 'nsec' && secretKeyRef.current) {
       const { finalizeEvent } = await import('nostr-tools/pure')
       signed = finalizeEvent(event as any, secretKeyRef.current) as any
+    } else if (authMethod === 'android-signer') {
+      // NIP-55: send to Android signer app via intent, wait for result
+      const { signEvent: androidSign, isNativeAndroid } = await import('../lib/androidSigner')
+      if (!isNativeAndroid()) throw new Error('Android signer not available on this platform')
+      // Event needs an id before signing — compute it first
+      const { getEventHash } = await import('nostr-tools/pure')
+      const eventWithId = { ...event, id: getEventHash(event as any) }
+      const result = await androidSign(JSON.stringify(eventWithId), pubkey || '')
+      if (result.signedEvent) {
+        signed = JSON.parse(result.signedEvent)
+      } else {
+        signed = { ...eventWithId, sig: result.signature } as any
+      }
     } else {
       // Auth method saved but signer lost (e.g., page reload with bunker)
       throw new Error('Session expired. Please sign in again.')
