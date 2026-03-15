@@ -178,7 +178,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({
         const { Camera, CameraSource, CameraResultType } = await import('@capacitor/camera')
         const photo = await Camera.getPhoto({
           quality: 90,
-          allowEditing: true,
+          allowEditing: false,
           resultType: CameraResultType.DataUrl,
           source: CameraSource.Prompt,
           promptLabelHeader: 'Cover Image',
