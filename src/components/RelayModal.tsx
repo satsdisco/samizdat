@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Capacitor } from '@capacitor/core'
 import type { RelayInfo } from '../types/nostr'
@@ -16,6 +16,7 @@ interface RelayModalProps {
 export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onClose }: RelayModalProps) {
   const [newUrl, setNewUrl] = useState('')
   const isNative = Capacitor.isNativePlatform()
+  const modalRef = useRef<HTMLDivElement>(null)
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,10 +30,20 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
   const writeCount = relays.filter(r => r.write).length
   const readCount = relays.filter(r => r.read).length
 
+  // Close only when tapping the backdrop (outside modal bounds)
+  const handleBackdropTouch = (e: React.TouchEvent | React.MouseEvent) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose()
+    }
+  }
+
   const modal = (
-    <>
-    <div className="relay-modal-backdrop" onClick={onClose} />
-    <div className={`relay-modal ${isNative ? 'native' : ''}`}>
+    <div
+      className={`relay-modal-backdrop ${isNative ? 'native' : ''}`}
+      onTouchEnd={handleBackdropTouch}
+      onClick={handleBackdropTouch}
+    >
+    <div ref={modalRef} className={`relay-modal ${isNative ? 'native' : ''}`}>
 
         {/* Handle bar (native only) */}
         {isNative && <div className="relay-modal-handle" />}
@@ -87,7 +98,6 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
         </form>
       </div>
     </div>
-    </>
   )
 
   return createPortal(modal, document.body)

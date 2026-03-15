@@ -1,17 +1,16 @@
-/* Backdrop — separate from the modal */
+/* Full-screen backdrop — touch outside modal closes it */
 .relay-modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
   z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Desktop: centered card */
 .relay-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -21,16 +20,14 @@
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-  z-index: 201;
 }
 
-/* Native Android: bottom sheet */
+/* Native Android: align to bottom */
+.relay-modal-backdrop.native {
+  align-items: flex-end;
+}
+
 .relay-modal.native {
-  top: auto;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  transform: none;
   width: 100%;
   max-width: 100%;
   border-radius: 20px 20px 0 0;
