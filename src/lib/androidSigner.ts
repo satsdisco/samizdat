@@ -230,28 +230,25 @@ export async function signEvent(eventJson: string, pubkey: string): Promise<{ si
     throw new Error('No response from signer — timed out or cancelled')
   }
 
-  // For sign_event with returnType=event, Amber returns the full signed event JSON
-  // via either result.event (native path) or result.result (callback URL path)
+  // returnType=signature: result is a 64-char hex signature string
+  const sig = pluginResult.result.trim()
+
+  // Sanity check — should be 128 hex chars (64 bytes)
+  if (/^[0-9a-f]{128}$/i.test(sig)) {
+    return { signature: sig }
+  }
+
+  // Fallback: might be a full event JSON (if native path returned event field)
   const nativeEvent = (pluginResult as any).event
   if (nativeEvent) {
-    // Native path: event field has the full signed event
     try {
-      return { signature: JSON.parse(nativeEvent).sig || '', signedEvent: nativeEvent }
+      const parsed = JSON.parse(nativeEvent)
+      return { signature: parsed.sig || sig, signedEvent: nativeEvent }
     } catch { /* fall through */ }
   }
 
-  // Callback URL path: result contains the full signed event JSON or just a signature
-  const resultData = pluginResult.result
-  if (resultData.startsWith('{')) {
-    // Full event JSON returned
-    try {
-      const parsed = JSON.parse(resultData)
-      return { signature: parsed.sig || '', signedEvent: resultData }
-    } catch { /* fall through */ }
-  }
-
-  // Just a signature string
-  return { signature: resultData }
+  // Last resort: use whatever we got
+  return { signature: sig }
 }
 
 /**

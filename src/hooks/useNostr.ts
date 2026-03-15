@@ -412,12 +412,15 @@ export function useNostr(): [NostrState, NostrActions] {
         pubkey: pubkey || '',
       }
       const result = await androidSign(JSON.stringify(unsignedEvent), pubkey || '')
+      // Reconstruct the signed event — we compute id ourselves and attach Amber's sig
+      const { getEventHash } = await import('nostr-tools/pure')
+      const withId = { ...unsignedEvent, id: getEventHash(unsignedEvent as any) }
       if (result.signedEvent) {
-        signed = JSON.parse(result.signedEvent)
+        // Native path returned full event
+        const parsed = JSON.parse(result.signedEvent)
+        signed = parsed.sig ? parsed : { ...withId, sig: result.signature } as any
       } else {
-        // Amber returned only a signature — reconstruct with nostr-tools
-        const { getEventHash } = await import('nostr-tools/pure')
-        const withId = { ...unsignedEvent, id: getEventHash(unsignedEvent as any) }
+        // Callback path returned just sig — attach to our computed event
         signed = { ...withId, sig: result.signature } as any
       }
     } else {

@@ -71,7 +71,7 @@ public class NostrSignerPlugin extends Plugin {
         String callbackUrlEncoded = Uri.encode(CALLBACK_URL);
         String uriStr = "nostrsigner:" + encodedEvent
                 + "?type=sign_event"
-                + "&returnType=event"
+                + "&returnType=signature"
                 + "&compressionType=none"
                 + "&callbackUrl=" + callbackUrlEncoded
                 + "&id=" + Uri.encode(id)
