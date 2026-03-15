@@ -29,7 +29,7 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
   const readCount = relays.filter(r => r.read).length
 
   return (
-    <div className="relay-modal-overlay" onClick={onClose}>
+    <div className={`relay-modal-overlay ${isNative ? 'native' : ''}`} onClick={onClose}>
       <div className={`relay-modal ${isNative ? 'native' : ''}`} onClick={e => e.stopPropagation()}>
 
         {/* Handle bar (native only) */}
@@ -41,9 +41,7 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
             Relays
           </div>
           <div className="relay-modal-counts">{writeCount} write · {readCount} read</div>
-          {!isNative && (
             <button className="relay-modal-close" onClick={onClose}>✕</button>
-          )}
         </div>
 
         <div className="relay-modal-list">
@@ -85,10 +83,6 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
             Add
           </button>
         </form>
-
-        {isNative && (
-          <button className="relay-modal-done" onClick={onClose}>Done</button>
-        )}
       </div>
     </div>
   )
