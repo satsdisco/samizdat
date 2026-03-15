@@ -402,13 +402,15 @@ export function useNostr(): [NostrState, NostrActions] {
       // NIP-55: send to Android signer app via intent, wait for result
       const { signEvent: androidSign, isNativeAndroid } = await import('../lib/androidSigner')
       if (!isNativeAndroid()) throw new Error('Android signer not available on this platform')
-      // Event needs an id before signing — compute it first
+      // Event needs pubkey + id before sending to signer
       const { getEventHash } = await import('nostr-tools/pure')
-      const eventWithId = { ...event, id: getEventHash(event as any) }
+      const eventWithPubkey = { ...event, pubkey: pubkey || '' }
+      const eventWithId = { ...eventWithPubkey, id: getEventHash(eventWithPubkey as any) }
       const result = await androidSign(JSON.stringify(eventWithId), pubkey || '')
       if (result.signedEvent) {
         signed = JSON.parse(result.signedEvent)
       } else {
+        // Attach returned sig to our computed event
         signed = { ...eventWithId, sig: result.signature } as any
       }
     } else {
