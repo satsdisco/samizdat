@@ -12,68 +12,65 @@ interface PreviewProps {
 }
 
 export function Preview({ title, bannerImage, html, profile, npubShort, onClose }: PreviewProps) {
+  const isNative = Capacitor.isNativePlatform()
   const now = new Date()
-  const dateStr = now.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
   // Handle hardware back button on Android
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return
-    const handleBack = (e: Event) => {
-      e.preventDefault()
-      onClose()
-    }
+    if (!isNative) return
+    const handleBack = (e: Event) => { e.preventDefault(); onClose() }
     document.addEventListener('backbutton', handleBack)
     return () => document.removeEventListener('backbutton', handleBack)
-  }, [onClose])
+  }, [onClose, isNative])
 
   return (
-    <div className="preview-overlay">
-      <div className="preview-toolbar">
-        <button className="preview-close" onClick={onClose}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          Back to editing
-        </button>
-        <span className="preview-label">Preview</span>
-        <div style={{ width: 120 }} />
-      </div>
+    <div className={`preview-overlay ${isNative ? 'native' : ''}`}>
 
-      <article className="preview-article">
+      {/* Desktop: top toolbar. Native: hidden (bottom bar used instead) */}
+      {!isNative && (
+        <div className="preview-toolbar">
+          <button className="preview-close" onClick={onClose}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            Back to editing
+          </button>
+          <span className="preview-label">Preview</span>
+          <div style={{ width: 120 }} />
+        </div>
+      )}
+
+      <article className={`preview-article ${isNative ? 'native-padding' : ''}`}>
         {bannerImage && (
-          <div className="preview-banner">
-            <img src={bannerImage} alt="" />
-          </div>
+          <div className="preview-banner"><img src={bannerImage} alt="" /></div>
         )}
-
         <div className="preview-content">
           <h1 className="preview-title">{title || 'Untitled'}</h1>
-
           <div className="preview-meta">
-            {profile?.picture && (
-              <img src={profile.picture} alt="" className="preview-avatar" />
-            )}
+            {profile?.picture && <img src={profile.picture} alt="" className="preview-avatar" />}
             <div className="preview-meta-text">
-              <span className="preview-author">
-                {profile?.name || npubShort || 'Anonymous'}
-              </span>
-              {profile?.nip05 && (
-                <span className="preview-nip05">{profile.nip05}</span>
-              )}
+              <span className="preview-author">{profile?.name || npubShort || 'Anonymous'}</span>
+              {profile?.nip05 && <span className="preview-nip05">{profile.nip05}</span>}
               <span className="preview-date">{dateStr}</span>
             </div>
           </div>
-
-          <div
-            className="preview-body samizdat-editor"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+          <div className="preview-body samizdat-editor" dangerouslySetInnerHTML={{ __html: html }} />
         </div>
       </article>
+
+      {/* Native: bottom bar — no status bar issues */}
+      {isNative && (
+        <div className="preview-bottom-bar">
+          <button className="preview-bottom-back" onClick={onClose}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            Back to editing
+          </button>
+          <span className="preview-bottom-label">PREVIEW</span>
+        </div>
+      )}
     </div>
   )
 }

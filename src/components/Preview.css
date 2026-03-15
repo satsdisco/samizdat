@@ -8,23 +8,18 @@
   overflow-y: auto;
 }
 
-/* Toolbar */
+/* Desktop top toolbar */
 .preview-toolbar {
   position: sticky;
   top: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Use a generous fixed top padding that covers any status bar height.
-     env(safe-area-inset-top) should give the real value when overlay mode is on,
-     but we clamp to at least 48px so the toolbar is always touchable. */
-  padding: 0.75rem 1rem;
-  /* 72px clears the tallest Android status bars (up to ~56dp on some devices) */
-  padding-top: 72px;
+  padding: 0.8rem 2rem;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(8px);
-  z-index: 50;
+  z-index: 5;
 }
 
 .preview-label {
@@ -49,13 +44,61 @@
   cursor: pointer;
   padding: 0.5rem 0.75rem;
   min-height: 44px;
-  min-width: 44px;
   border-radius: 8px;
   -webkit-tap-highlight-color: transparent;
 }
 
-.preview-close:active {
-  background: var(--bg-secondary);
+/* Native Android bottom bar — always visible above gesture bar */
+.preview-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 8px));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+
+.preview-bottom-back {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  min-height: 52px;
+  border-radius: 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.preview-bottom-back:active {
+  background: rgba(192, 57, 43, 0.1);
+}
+
+.preview-bottom-label {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding-right: 0.5rem;
+}
+
+/* Article needs bottom padding on native so content isn't behind the bottom bar */
+.preview-article.native-padding {
+  padding-bottom: 80px;
 }
 
 /* Article */
@@ -65,7 +108,7 @@
 
 .preview-banner {
   width: 100%;
-  max-height: 400px;
+  max-height: 50vh;
   overflow: hidden;
 }
 
@@ -73,33 +116,29 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
 .preview-content {
-  max-width: var(--content-width);
+  max-width: 680px;
   margin: 0 auto;
-  padding: 2rem var(--gutter) 4rem;
+  padding: 2rem var(--gutter, 1.5rem) 4rem;
 }
 
-/* Title */
 .preview-title {
-  font-family: var(--font-body);
-  font-size: 2.6rem;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 2rem;
   font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  line-height: 1.25;
   color: var(--text);
-  margin-bottom: 1.5rem;
+  margin: 0 0 1.2rem;
 }
 
-/* Author meta */
 .preview-meta {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 2.5rem;
-  padding-bottom: 2rem;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--border);
 }
 
@@ -108,12 +147,13 @@
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .preview-meta-text {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.15rem;
 }
 
 .preview-author {
@@ -131,32 +171,65 @@
 
 .preview-date {
   font-family: var(--font-ui);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-faint);
 }
 
-/* Body — inherits .samizdat-editor styles from Editor.css */
 .preview-body {
-  /* All typography comes from samizdat-editor class */
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--text);
+}
+
+.preview-body h1, .preview-body h2, .preview-body h3 {
+  font-family: var(--font-serif, Georgia, serif);
+  color: var(--text);
+  margin: 1.5em 0 0.5em;
+}
+
+.preview-body p {
+  margin: 0 0 1.2em;
 }
 
 .preview-body img {
   max-width: 100%;
-  border-radius: 6px;
-  margin: 1.5rem 0;
+  border-radius: 4px;
 }
 
-/* Responsive */
+.preview-body a {
+  color: var(--accent);
+}
+
+.preview-body blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 1.5em 0;
+}
+
+.preview-body pre {
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.85em;
+}
+
+.preview-body code {
+  background: var(--bg-secondary);
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
 @media (max-width: 640px) {
-  .preview-title {
-    font-size: 1.8rem;
-  }
-
-  .preview-toolbar {
-    padding: 0.8rem 1rem;
-  }
-
   .preview-content {
     padding: 1.5rem 1rem 3rem;
+  }
+
+  .preview-title {
+    font-size: 1.6rem;
   }
 }

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import type { RelayInfo } from '../types/nostr'
+import { RelayModal } from './RelayModal'
 import './TitleBar.css'
 
 interface TitleBarProps {
@@ -50,7 +51,6 @@ export function TitleBar({
   const isNative = Capacitor.isNativePlatform()
   const [showRelays, setShowRelays] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [newRelayUrl, setNewRelayUrl] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
@@ -70,7 +70,6 @@ export function TitleBar({
   }, [showRelays, showUserMenu])
 
   const writeRelays = relays.filter(r => r.write)
-  const readRelays = relays.filter(r => r.read)
 
   return (
     <header className="titlebar">
@@ -108,78 +107,14 @@ export function TitleBar({
               </button>
 
               {showRelays && (
-                <div className="relay-dropdown">
-                  <div className="relay-dropdown-header">
-                    <div className="relay-dropdown-title">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                      </svg>
-                      Relays
-                    </div>
-                    <span className="relay-dropdown-sub">{writeRelays.length}W · {readRelays.length}R</span>
-                  </div>
-                  <div className="relay-dropdown-list">
-                    {relays.map(relay => {
-                      const host = relay.url.replace('wss://', '').replace('ws://', '').replace(/\/$/, '')
-                      return (
-                        <div key={relay.url} className="relay-row">
-                          <span className="relay-host" title={relay.url}>{host}</span>
-                          <div className="relay-actions">
-                            <button
-                              className={`relay-pill ${relay.read ? 'on' : 'off'}`}
-                              onClick={() => onRelayToggle(relay.url, 'read')}
-                              title={relay.read ? 'Disable read' : 'Enable read'}
-                            >
-                              read
-                            </button>
-                            <button
-                              className={`relay-pill ${relay.write ? 'on' : 'off'}`}
-                              onClick={() => onRelayToggle(relay.url, 'write')}
-                              title={relay.write ? 'Disable write' : 'Enable write'}
-                            >
-                              write
-                            </button>
-                            <button
-                              className="relay-remove"
-                              onClick={() => onRelayRemove(relay.url)}
-                              title="Remove relay"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {relays.length === 0 && (
-                    <div className="relay-empty">No relays found. Using defaults.</div>
-                  )}
-                  <form
-                    className="relay-add-form"
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      const url = newRelayUrl.trim()
-                      if (!url) return
-                      const full = url.startsWith('wss://') || url.startsWith('ws://') ? url : `wss://${url}`
-                      if (!relays.some(r => r.url === full)) {
-                        onRelayAdd(full)
-                      }
-                      setNewRelayUrl('')
-                    }}
-                  >
-                    <input
-                      type="text"
-                      className="relay-add-input"
-                      placeholder="wss://relay.example.com"
-                      value={newRelayUrl}
-                      onChange={(e) => setNewRelayUrl(e.target.value)}
-                    />
-                    <button type="submit" className="relay-add-btn" disabled={!newRelayUrl.trim()}>
-                      Add
-                    </button>
-                  </form>
-                </div>
+                <RelayModal
+                  relays={relays}
+                  isConnected={isConnected}
+                  onToggle={onRelayToggle}
+                  onAdd={onRelayAdd}
+                  onRemove={onRelayRemove}
+                  onClose={() => setShowRelays(false)}
+                />
               )}
             </div>
 
