@@ -15,12 +15,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.8rem 2rem;
-  padding-top: calc(0.8rem + env(safe-area-inset-top, 0px));
+  /* Use a generous fixed top padding that covers any status bar height.
+     env(safe-area-inset-top) should give the real value when overlay mode is on,
+     but we clamp to at least 48px so the toolbar is always touchable. */
+  padding: 0.75rem 1rem;
+  padding-top: max(48px, calc(0.75rem + env(safe-area-inset-top, 44px)));
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(8px);
-  z-index: 5;
+  z-index: 50;
 }
 
 .preview-label {
@@ -33,17 +36,25 @@
 }
 
 .preview-close {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
   font-family: var(--font-ui);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--accent);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0.3rem 0;
+  padding: 0.5rem 0.75rem;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.preview-close:hover {
-  text-decoration: underline;
+.preview-close:active {
+  background: var(--bg-secondary);
 }
 
 /* Article */

@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { Capacitor } from '@capacitor/core'
 import './Preview.css'
 
 interface PreviewProps {
@@ -17,13 +19,28 @@ export function Preview({ title, bannerImage, html, profile, npubShort, onClose 
     year: 'numeric',
   })
 
+  // Handle hardware back button on Android
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    const handleBack = (e: Event) => {
+      e.preventDefault()
+      onClose()
+    }
+    document.addEventListener('backbutton', handleBack)
+    return () => document.removeEventListener('backbutton', handleBack)
+  }, [onClose])
+
   return (
     <div className="preview-overlay">
       <div className="preview-toolbar">
-        <span className="preview-label">Preview</span>
         <button className="preview-close" onClick={onClose}>
-          ← Back to editing
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Back to editing
         </button>
+        <span className="preview-label">Preview</span>
+        <div style={{ width: 120 }} />
       </div>
 
       <article className="preview-article">
