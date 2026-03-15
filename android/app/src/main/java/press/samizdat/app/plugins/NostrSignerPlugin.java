@@ -35,15 +35,17 @@ public class NostrSignerPlugin extends Plugin {
 
     @PluginMethod()
     public void getPublicKey(PluginCall call) {
-        // Use URI query params — the tested web client path that Amber handles reliably
-        String callbackUrlEncoded = Uri.encode(CALLBACK_URL);
-        String uriStr = "nostrsigner:?type=get_public_key"
-                + "&returnType=signature"
-                + "&compressionType=none"
-                + "&callbackUrl=" + callbackUrlEncoded
-                + "&appName=Samizdat";
+        // Use intent extras — this is the path that was confirmed working with Amber
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:"));
+        intent.putExtra("type", "get_public_key");
+        intent.putExtra("callbackUrl", CALLBACK_URL);
+        intent.putExtra("returnType", "signature");
+        intent.putExtra("appName", "Samizdat");
 
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriStr));
+        String permissions = call.getString("permissions", "");
+        if (!permissions.isEmpty()) {
+            intent.putExtra("permissions", permissions);
+        }
 
         try {
             startActivityForResult(call, intent, "handleSignerResult");
