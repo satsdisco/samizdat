@@ -369,11 +369,19 @@
 }
 
 /* Mobile */
-@media (max-width: 640px) {
+@media (max-width: 960px) {
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
   .modal {
-    width: 95%;
+    width: 100%;
+    max-width: 100%;
     max-height: 90vh;
-    margin: 1rem;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
   }
 
   .zap-amount-row {

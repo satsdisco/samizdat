@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.8rem 1rem;
-  padding-top: calc(0.8rem + env(safe-area-inset-top, 0px));
+  padding-top: calc(0.8rem + var(--safe-top));
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   position: sticky;

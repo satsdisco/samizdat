@@ -96,7 +96,8 @@ body {
 
 /* Expose insets as CSS variables for component-level use */
 :root {
-  --safe-top: env(safe-area-inset-top, 0px);
+  --status-bar-height: 0px; /* overridden by JS in nativeInit for native Android */
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--status-bar-height));
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);

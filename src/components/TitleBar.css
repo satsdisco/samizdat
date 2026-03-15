@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.8rem var(--gutter);
-  padding-top: calc(0.8rem + env(safe-area-inset-top, 0px));
+  padding-top: calc(0.8rem + var(--safe-top));
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -558,7 +558,7 @@
 @media (max-width: 640px) {
   .titlebar {
     padding: 0.4rem 0.8rem;
-    padding-top: calc(0.4rem + env(safe-area-inset-top, 0px));
+    padding-top: calc(0.4rem + var(--safe-top));
     gap: 0.3rem;
   }
 

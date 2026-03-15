@@ -13,7 +13,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 2rem;
-  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+  padding-top: calc(1rem + var(--safe-top));
   border-bottom: 1px solid #1a1a1a;
 }
 
@@ -859,7 +859,7 @@
 
   .press-nav {
     padding: 0.6rem 1rem;
-    padding-top: calc(0.6rem + env(safe-area-inset-top, 0px));
+    padding-top: calc(0.6rem + var(--safe-top));
   }
 
   /* Hide top tab switcher on mobile — bottom tabs instead */

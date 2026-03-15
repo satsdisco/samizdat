@@ -19,6 +19,17 @@ export async function initNative(): Promise<void> {
     // Light style = dark icons (for light editor/press backgrounds)
     await StatusBar.setStyle({ style: Style.Light })
     await StatusBar.setBackgroundColor({ color: '#00000000' })
+
+    // Read actual status bar height and inject as CSS variable
+    // This is more reliable than env(safe-area-inset-top) on some Android versions
+    try {
+      const info = await StatusBar.getInfo()
+      const height = (info as any).height ?? 48
+      document.documentElement.style.setProperty('--status-bar-height', `${height}px`)
+    } catch {
+      // Fallback: typical Android status bar is 24-48dp
+      document.documentElement.style.setProperty('--status-bar-height', '48px')
+    }
   } catch (e) {
     console.warn('[NativeInit] StatusBar setup failed:', e)
   }
