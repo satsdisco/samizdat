@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Capacitor } from '@capacitor/core'
 import type { RelayInfo } from '../types/nostr'
 import './RelayModal.css'
@@ -28,7 +29,7 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
   const writeCount = relays.filter(r => r.write).length
   const readCount = relays.filter(r => r.read).length
 
-  return (
+  const modal = (
     <div className={`relay-modal-overlay ${isNative ? 'native' : ''}`} onClick={onClose}>
       <div className={`relay-modal ${isNative ? 'native' : ''}`} onClick={e => e.stopPropagation()}>
 
@@ -86,4 +87,6 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
       </div>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }
