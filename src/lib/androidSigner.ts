@@ -193,8 +193,11 @@ export async function signEvent(eventJson: string, pubkey: string): Promise<{ si
 
   const result = await NostrSigner.signEvent({
     event: eventJson,
+    // Pass current_user as npub if possible — Amber uses it for account switching
     currentUser: pubkey,
-    id: (() => { try { return JSON.parse(eventJson).id || '' } catch { return '' } })(),
+    // id is required as an extra — use empty string if not in event yet
+    id: (() => { try { return JSON.parse(eventJson).id || 'samizdat-sign' } catch { return 'samizdat-sign' } })(),
+    // Always include package if known — goes directly to Amber without chooser
     ...(pkg ? { package: pkg } : {}),
   })
 

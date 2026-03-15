@@ -35,17 +35,15 @@ public class NostrSignerPlugin extends Plugin {
 
     @PluginMethod()
     public void getPublicKey(PluginCall call) {
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:"));
-        intent.putExtra("type", "get_public_key");
-        // Callback URL as fallback — Amber will use this if callingPackage is null
-        intent.putExtra("callbackUrl", CALLBACK_URL);
-        intent.putExtra("returnType", "signature");
-        intent.putExtra("appName", "Samizdat");
+        // Use URI query params — the tested web client path that Amber handles reliably
+        String callbackUrlEncoded = Uri.encode(CALLBACK_URL);
+        String uriStr = "nostrsigner:?type=get_public_key"
+                + "&returnType=signature"
+                + "&compressionType=none"
+                + "&callbackUrl=" + callbackUrlEncoded
+                + "&appName=Samizdat";
 
-        String permissions = call.getString("permissions", "");
-        if (!permissions.isEmpty()) {
-            intent.putExtra("permissions", permissions);
-        }
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriStr));
 
         try {
             startActivityForResult(call, intent, "handleSignerResult");
@@ -58,25 +56,30 @@ public class NostrSignerPlugin extends Plugin {
     public void signEvent(PluginCall call) {
         String eventJson = call.getString("event", "");
         String currentUser = call.getString("currentUser", "");
-        String id = call.getString("id", "");
+        String id = call.getString("id", "samizdat-sign");
 
         if (eventJson.isEmpty()) {
             call.reject("Event JSON is required");
             return;
         }
 
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:" + Uri.encode(eventJson)));
-        intent.putExtra("type", "sign_event");
-        intent.putExtra("callbackUrl", CALLBACK_URL);
-        intent.putExtra("returnType", "event");
-        intent.putExtra("appName", "Samizdat");
+        // Build URI with query params (same as web client flow — most tested path for Amber)
+        // nostrsigner:<eventJson>?type=sign_event&returnType=event&callbackUrl=...&id=...
+        String encodedEvent = Uri.encode(eventJson);
+        String callbackUrlEncoded = Uri.encode(CALLBACK_URL);
+        String uriStr = "nostrsigner:" + encodedEvent
+                + "?type=sign_event"
+                + "&returnType=event"
+                + "&compressionType=none"
+                + "&callbackUrl=" + callbackUrlEncoded
+                + "&id=" + Uri.encode(id)
+                + "&appName=Samizdat";
 
-        if (!id.isEmpty()) {
-            intent.putExtra("id", id);
-        }
         if (!currentUser.isEmpty()) {
-            intent.putExtra("current_user", currentUser);
+            uriStr += "&current_user=" + Uri.encode(currentUser);
         }
+
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriStr));
 
         String signerPackage = call.getString("package", "");
         if (!signerPackage.isEmpty()) {

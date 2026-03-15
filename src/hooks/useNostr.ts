@@ -402,16 +402,23 @@ export function useNostr(): [NostrState, NostrActions] {
       // NIP-55: send to Android signer app via intent, wait for result
       const { signEvent: androidSign, isNativeAndroid } = await import('../lib/androidSigner')
       if (!isNativeAndroid()) throw new Error('Android signer not available on this platform')
-      // Event needs pubkey + id before sending to signer
-      const { getEventHash } = await import('nostr-tools/pure')
-      const eventWithPubkey = { ...event, pubkey: pubkey || '' }
-      const eventWithId = { ...eventWithPubkey, id: getEventHash(eventWithPubkey as any) }
-      const result = await androidSign(JSON.stringify(eventWithId), pubkey || '')
+      // Send minimal unsigned event — Amber computes id/sig itself
+      // Only include fields Amber expects: kind, created_at, tags, content, pubkey
+      const unsignedEvent = {
+        kind: event.kind,
+        created_at: event.created_at,
+        tags: event.tags,
+        content: event.content,
+        pubkey: pubkey || '',
+      }
+      const result = await androidSign(JSON.stringify(unsignedEvent), pubkey || '')
       if (result.signedEvent) {
         signed = JSON.parse(result.signedEvent)
       } else {
-        // Attach returned sig to our computed event
-        signed = { ...eventWithId, sig: result.signature } as any
+        // Amber returned only a signature — reconstruct with nostr-tools
+        const { getEventHash } = await import('nostr-tools/pure')
+        const withId = { ...unsignedEvent, id: getEventHash(unsignedEvent as any) }
+        signed = { ...withId, sig: result.signature } as any
       }
     } else {
       // Auth method saved but signer lost (e.g., page reload with bunker)
