@@ -534,9 +534,10 @@ export function useNostr(): [NostrState, NostrActions] {
 
       const signed = await signEvent(event)
 
-      // Always publish to user's write relays AND default relays for maximum reach
+      // Publish only to user's selected write relays
+      // If no write relays configured, fall back to defaults
       const writeRelays = relays.filter(r => r.write).map(r => r.url)
-      const targetRelays = [...new Set([...writeRelays, ...DEFAULT_RELAYS])]
+      const targetRelays = writeRelays.length > 0 ? writeRelays : DEFAULT_RELAYS
 
       const results = await publishToRelays(signed, targetRelays)
       const successful = results.filter(r => r.ok)
@@ -640,7 +641,7 @@ export function useNostr(): [NostrState, NostrActions] {
       const signed = await signEvent(event)
 
       const writeRelays = relays.filter(r => r.write).map(r => r.url)
-      const targetRelays = [...new Set([...writeRelays, ...DEFAULT_RELAYS])]
+      const targetRelays = writeRelays.length > 0 ? writeRelays : DEFAULT_RELAYS
       await publishToRelays(signed, targetRelays)
 
       // Remove from local state
