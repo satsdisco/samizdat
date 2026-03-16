@@ -30,20 +30,19 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
   const writeCount = relays.filter(r => r.write).length
   const readCount = relays.filter(r => r.read).length
 
-  // Close only when tapping the backdrop (outside modal bounds)
-  const handleBackdropTouch = (e: React.TouchEvent | React.MouseEvent) => {
-    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
-      onClose()
-    }
-  }
-
   const modal = (
     <div
       className={`relay-modal-backdrop ${isNative ? 'native' : ''}`}
-      onTouchEnd={handleBackdropTouch}
-      onClick={handleBackdropTouch}
+      onTouchEnd={onClose}
+      onClick={onClose}
     >
-    <div ref={modalRef} className={`relay-modal ${isNative ? 'native' : ''}`}>
+    <div
+      ref={modalRef}
+      className={`relay-modal ${isNative ? 'native' : ''}`}
+      onTouchStart={e => e.stopPropagation()}
+      onTouchEnd={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
+    >
 
         {/* Handle bar (native only) */}
         {isNative && <div className="relay-modal-handle" />}
