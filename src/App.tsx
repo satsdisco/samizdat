@@ -283,7 +283,12 @@ function AppRoutes({ editorView, nostr, actions }: { editorView: () => React.Rea
   return (
     <Routes>
       <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route path="/a/:naddr" element={<ArticleReader />} />
+      <Route path="/a/:naddr" element={
+        <ArticleReader
+          currentUserPubkey={nostr.pubkey}
+          onDeleteArticle={actions.deleteArticle}
+        />
+      } />
       <Route path="/read" element={<Press />} />
       <Route path="/settings" element={
         <Settings

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { markdownToHtml } from '../lib/markdown'
 import { fetchArticleByNaddr, fetchProfile, fetchComments, type ArticleData, type CommentData } from '../lib/reader'
@@ -25,9 +25,16 @@ function formatDate(ts: number): string {
   })
 }
 
-export function ArticleReader() {
+interface ArticleReaderProps {
+  currentUserPubkey?: string | null
+  onDeleteArticle?: (article: any) => Promise<void>
+}
+
+export function ArticleReader({ currentUserPubkey, onDeleteArticle }: ArticleReaderProps = {}) {
   const { naddr } = useParams<{ naddr: string }>()
   const [article, setArticle] = useState<ArticleData | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [author, setAuthor] = useState<{ name?: string; picture?: string; nip05?: string; lud16?: string } | null>(null)
   const [comments, setComments] = useState<CommentData[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,6 +44,22 @@ export function ArticleReader() {
   const [unlocking, setUnlocking] = useState(false)
   const [forceUnlocked, setForceUnlocked] = useState(false)
   const loadingMsg = useLoadingMessage()
+  const navigate = useNavigate()
+
+  const isOwnArticle = article && currentUserPubkey && article.pubkey === currentUserPubkey
+
+  const handleDelete = async () => {
+    if (!article || !onDeleteArticle) return
+    setDeleting(true)
+    try {
+      await onDeleteArticle(article)
+      navigate(-1)
+    } catch (e) {
+      console.error('Delete failed:', e)
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
+  }
 
   // Auto-verification for seamless zap experience
   const zapVerification = useAutoZapVerification(
@@ -219,7 +242,35 @@ export function ArticleReader() {
       {/* Minimal nav */}
       <nav className="reader-nav">
         <Link to="/read" className="reader-wordmark">samizdat</Link>
-        <a href="/" className="reader-write-btn">Start writing</a>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {isOwnArticle && onDeleteArticle && (
+            confirmDelete ? (
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', background: '#c0392b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', minHeight: '36px' }}
+                >
+                  {deleting ? 'Deleting…' : 'Confirm delete'}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', minHeight: '36px' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', background: 'transparent', color: '#c0392b', border: '1px solid #c0392b', borderRadius: '6px', cursor: 'pointer', minHeight: '36px' }}
+              >
+                Delete
+              </button>
+            )
+          )}
+          <a href="/" className="reader-write-btn">Start writing</a>
+        </div>
       </nav>
 
       <article className="reader-article">
