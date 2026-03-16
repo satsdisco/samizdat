@@ -339,3 +339,15 @@
     opacity: 1;
   }
 }
+
+/* Native: bigger, cleaner title */
+.is-native-android .title-input {
+  font-size: 1.8rem;
+  padding: 0.5rem 0;
+  border: none;
+  border-bottom: none;
+}
+
+.is-native-android .editor-wrapper {
+  padding: 1rem 1.25rem;
+}

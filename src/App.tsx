@@ -16,6 +16,7 @@ import { LoginScreen } from './components/LoginScreen'
 import { Landing } from './components/Landing'
 import { AuthCallback } from './components/AuthCallback'
 import { Settings } from './components/Settings'
+import { NativeWriteBar } from './components/NativeWriteBar'
 import { useNostr } from './hooks/useNostr'
 import type { Article } from './types/nostr'
 import './styles/theme.css'
@@ -185,29 +186,48 @@ function App() {
       return <Landing onGetStarted={() => setShowLogin(true)} />
     }
 
+    const isNativeAndroid = Capacitor.isNativePlatform()
+
     return (
-      <div className="app">
-        <TitleBar
-        wordCount={wordCount}
-        onPublish={() => setShowPublishModal(true)}
-        onSaveDraft={handleSaveDraft}
-        onPreview={() => setShowPreview(true)}
-        isConnected={nostr.isConnected}
-        isPublishing={nostr.isPublishing}
-        pubkey={nostr.pubkey}
-        npub={nostr.npub}
-        npubShort={nostr.npubShort}
-        profile={nostr.profile}
-        onLogin={actions.loginWithExtension}
-        onLogout={actions.logout}
-        isLoggingIn={nostr.isLoggingIn}
-        relayCount={nostr.relays.length}
-        relays={nostr.relays}
-        onRelayToggle={actions.toggleRelay}
-        onRelayAdd={actions.addRelay}
-        onRelayRemove={actions.removeRelay}
-        onToggleSidebar={() => setShowSidebar(!showSidebar)}
-      />
+      <div className={`app ${isNativeAndroid ? 'native-write' : ''}`}>
+        {/* Desktop: full TitleBar. Native: slim header with just logo + avatar */}
+        {isNativeAndroid ? (
+          <div className="native-top-bar">
+            <span className="native-top-logo">samizdat</span>
+            <button
+              className="native-top-avatar"
+              onPointerUp={() => window.location.href = '/settings'}
+            >
+              {nostr.profile?.picture ? (
+                <img src={nostr.profile.picture} alt="" />
+              ) : (
+                <span>{(nostr.profile?.name || '?')[0]?.toUpperCase()}</span>
+              )}
+            </button>
+          </div>
+        ) : (
+          <TitleBar
+          wordCount={wordCount}
+          onPublish={() => setShowPublishModal(true)}
+          onSaveDraft={handleSaveDraft}
+          onPreview={() => setShowPreview(true)}
+          isConnected={nostr.isConnected}
+          isPublishing={nostr.isPublishing}
+          pubkey={nostr.pubkey}
+          npub={nostr.npub}
+          npubShort={nostr.npubShort}
+          profile={nostr.profile}
+          onLogin={actions.loginWithExtension}
+          onLogout={actions.logout}
+          isLoggingIn={nostr.isLoggingIn}
+          relayCount={nostr.relays.length}
+          relays={nostr.relays}
+          onRelayToggle={actions.toggleRelay}
+          onRelayAdd={actions.addRelay}
+          onRelayRemove={actions.removeRelay}
+          onToggleSidebar={() => setShowSidebar(!showSidebar)}
+          />
+        )}
 
       <Editor
         ref={editorRef}
@@ -230,6 +250,23 @@ function App() {
         onNewArticle={handleNewArticle}
         onRefresh={actions.loadArticles}
       />
+
+      {/* Native Android: bottom write bar */}
+      {isNativeAndroid && (
+        <NativeWriteBar
+          wordCount={wordCount}
+          isConnected={nostr.isConnected}
+          isPublishing={nostr.isPublishing}
+          relays={nostr.relays}
+          onPublish={() => setShowPublishModal(true)}
+          onSaveDraft={handleSaveDraft}
+          onPreview={() => setShowPreview(true)}
+          onRelayToggle={actions.toggleRelay}
+          onRelayAdd={actions.addRelay}
+          onRelayRemove={actions.removeRelay}
+          onBack={() => window.history.back()}
+        />
+      )}
 
       {showPreview && (
         <Preview

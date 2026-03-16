@@ -1,0 +1,136 @@
+.native-write-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 8px));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  gap: 0.5rem;
+}
+
+/* Back button */
+.nwb-back {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nwb-back:active {
+  background: var(--bg-secondary);
+}
+
+/* Center info + relay tap */
+.nwb-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 0 0.5rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nwb-center:active {
+  background: var(--bg-secondary);
+}
+
+.nwb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.nwb-dot.connected {
+  background: #27ae60;
+}
+
+.nwb-words {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+.nwb-relay-count {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-faint);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+}
+
+/* Right actions */
+.nwb-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nwb-preview {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nwb-preview:disabled {
+  opacity: 0.35;
+}
+
+.nwb-preview:not(:disabled):active {
+  background: var(--bg-secondary);
+}
+
+.nwb-publish {
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.6rem 1.4rem;
+  min-height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: #c0392b;
+  color: white;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+
+.nwb-publish:disabled {
+  opacity: 0.4;
+}
+
+.nwb-publish:not(:disabled):active,
+.nwb-publish.publishing {
+  opacity: 0.75;
+}
