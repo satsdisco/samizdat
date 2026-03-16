@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Capacitor } from '@capacitor/core'
 import type { RelayInfo } from '../types/nostr'
@@ -16,10 +16,9 @@ interface RelayModalProps {
 export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onClose }: RelayModalProps) {
   const [newUrl, setNewUrl] = useState('')
   const isNative = Capacitor.isNativePlatform()
-  const modalRef = useRef<HTMLDivElement>(null)
 
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleAdd = (e?: React.FormEvent) => {
+    e?.preventDefault()
     const url = newUrl.trim()
     if (!url) return
     const full = url.startsWith('wss://') || url.startsWith('ws://') ? url : `wss://${url}`
@@ -31,18 +30,8 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
   const readCount = relays.filter(r => r.read).length
 
   const modal = (
-    <div
-      className={`relay-modal-backdrop ${isNative ? 'native' : ''}`}
-      onTouchEnd={onClose}
-      onClick={onClose}
-    >
-    <div
-      ref={modalRef}
-      className={`relay-modal ${isNative ? 'native' : ''}`}
-      onTouchStart={e => e.stopPropagation()}
-      onTouchEnd={e => e.stopPropagation()}
-      onClick={e => e.stopPropagation()}
-    >
+    <div className={`relay-modal-backdrop ${isNative ? 'native' : ''}`}>
+    <div className={`relay-modal ${isNative ? 'native' : ''}`}>
 
         {/* Handle bar (native only) */}
         {isNative && <div className="relay-modal-handle" />}
@@ -53,7 +42,10 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
             Relays
           </div>
           <div className="relay-modal-counts">{writeCount} write · {readCount} read</div>
-            <button className="relay-modal-close" onClick={onClose}>✕</button>
+            <button
+            className="relay-modal-close"
+            onPointerUp={onClose}
+          >✕</button>
         </div>
 
         <div className="relay-modal-list">
@@ -68,13 +60,16 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
                 <div className="relay-modal-actions">
                   <button
                     className={`relay-modal-pill ${relay.read ? 'on' : ''}`}
-                    onClick={() => onToggle(relay.url, 'read')}
+                    onPointerUp={(e) => { e.stopPropagation(); onToggle(relay.url, 'read') }}
                   >read</button>
                   <button
                     className={`relay-modal-pill ${relay.write ? 'on' : ''}`}
-                    onClick={() => onToggle(relay.url, 'write')}
+                    onPointerUp={(e) => { e.stopPropagation(); onToggle(relay.url, 'write') }}
                   >write</button>
-                  <button className="relay-modal-remove" onClick={() => onRemove(relay.url)}>✕</button>
+                  <button
+                    className="relay-modal-remove"
+                    onPointerUp={(e) => { e.stopPropagation(); onRemove(relay.url) }}
+                  >✕</button>
                 </div>
               </div>
             )
@@ -91,7 +86,12 @@ export function RelayModal({ relays, isConnected, onToggle, onAdd, onRemove, onC
             autoCapitalize="none"
             autoCorrect="off"
           />
-          <button className="relay-modal-add-btn" type="submit" disabled={!newUrl.trim()}>
+          <button
+            className="relay-modal-add-btn"
+            type="button"
+            disabled={!newUrl.trim()}
+            onPointerUp={(e) => { e.stopPropagation(); handleAdd() }}
+          >
             Add
           </button>
         </form>
