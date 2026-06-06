@@ -21,9 +21,25 @@ import { useNostr } from './hooks/useNostr'
 import type { Article } from './types/nostr'
 import './styles/theme.css'
 
+const DRAFT_TITLE_KEY = 'samizdat_draft_title'
+const DRAFT_CONTENT_KEY = 'samizdat_draft_content'
+const DRAFT_BANNER_KEY = 'samizdat_draft_banner'
+
+function clearLocalDraft() {
+  localStorage.removeItem(DRAFT_TITLE_KEY)
+  localStorage.removeItem(DRAFT_CONTENT_KEY)
+  localStorage.removeItem(DRAFT_BANNER_KEY)
+}
+
+function hasMeaningfulHtml(html: string) {
+  const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim()
+  return text.length > 0 || /<img[\s>]/i.test(html)
+}
+
 function App() {
   const [nostr, actions] = useNostr()
   const editorRef = useRef<EditorRef>(null)
+  const activeArticleSlugRef = useRef<string | undefined>(undefined)
   const [showLogin, setShowLogin] = useState(false)
 
   // Editor state
@@ -44,8 +60,12 @@ function App() {
     const text = html.replace(/<[^>]*>/g, ' ').trim()
     const words = text ? text.split(/\s+/).filter(w => w.length > 0).length : 0
     setWordCount(words)
-    // Auto-save to localStorage
-    localStorage.setItem('samizdat_draft_content', html)
+    // Auto-save only truly new local drafts. Loaded articles/drafts have their own relay identity.
+    if (!activeArticleSlugRef.current && hasMeaningfulHtml(html)) {
+      localStorage.setItem(DRAFT_CONTENT_KEY, html)
+    } else if (!activeArticleSlugRef.current) {
+      localStorage.removeItem(DRAFT_CONTENT_KEY)
+    }
   }, [])
 
   // Handle nstart #nostr-login=... redirect (fallback for modal)
@@ -64,10 +84,10 @@ function App() {
 
   // Restore saved draft from localStorage
   useEffect(() => {
-    const savedTitle = localStorage.getItem('samizdat_draft_title')
+    const savedTitle = localStorage.getItem(DRAFT_TITLE_KEY)
     if (savedTitle) setTitle(savedTitle)
-    const savedContent = localStorage.getItem('samizdat_draft_content')
-    const savedBanner = localStorage.getItem('samizdat_draft_banner')
+    const savedContent = localStorage.getItem(DRAFT_CONTENT_KEY)
+    const savedBanner = localStorage.getItem(DRAFT_BANNER_KEY)
     if (savedContent) {
       // Small delay to let editor mount first
       setTimeout(() => editorRef.current?.setContent(savedContent), 100)
@@ -76,13 +96,16 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (title) localStorage.setItem('samizdat_draft_title', title)
-  }, [title])
+    if (currentSlug) return
+    if (title) localStorage.setItem(DRAFT_TITLE_KEY, title)
+    else localStorage.removeItem(DRAFT_TITLE_KEY)
+  }, [title, currentSlug])
 
   useEffect(() => {
-    if (bannerImage) localStorage.setItem('samizdat_draft_banner', bannerImage)
-    else localStorage.removeItem('samizdat_draft_banner')
-  }, [bannerImage])
+    if (currentSlug) return
+    if (bannerImage) localStorage.setItem(DRAFT_BANNER_KEY, bannerImage)
+    else localStorage.removeItem(DRAFT_BANNER_KEY)
+  }, [bannerImage, currentSlug])
 
   // Load articles when connected
   useEffect(() => {
@@ -104,17 +127,22 @@ function App() {
     })
   }, [title, currentHtml, currentSlug, currentPublishedAt, bannerImage, actions])
 
-  // Save draft — always saves to localStorage, attempts relay publish if possible
+  // Save draft — localStorage is only for new unslugged drafts; relay drafts keep slugged article state.
   const handleSaveDraft = useCallback(() => {
-    // Always save locally first — this never fails
-    localStorage.setItem('samizdat_draft_title', title)
-    localStorage.setItem('samizdat_draft_content', currentHtml)
-    if (bannerImage) localStorage.setItem('samizdat_draft_banner', bannerImage)
+    if (!currentSlug) {
+      if (title) localStorage.setItem(DRAFT_TITLE_KEY, title)
+      else localStorage.removeItem(DRAFT_TITLE_KEY)
+      if (hasMeaningfulHtml(currentHtml)) localStorage.setItem(DRAFT_CONTENT_KEY, currentHtml)
+      else localStorage.removeItem(DRAFT_CONTENT_KEY)
+      if (bannerImage) localStorage.setItem(DRAFT_BANNER_KEY, bannerImage)
+      else localStorage.removeItem(DRAFT_BANNER_KEY)
+    }
 
     // Try to publish to relays too (may fail if session expired)
     actions.publish(title, currentHtml, {
       slug: currentSlug,
       isDraft: true,
+      image: bannerImage,
     }).catch?.(() => {
       // Relay publish failed but local save succeeded — that's ok
     })
@@ -128,25 +156,28 @@ function App() {
       const confirmed = window.confirm(`You have unsaved changes in "${title}". Load "${article.title}" instead?`)
       if (!confirmed) return
     }
+    activeArticleSlugRef.current = article.slug
     setTitle(article.title)
     setCurrentSlug(article.slug)
     setCurrentPublishedAt(article.publishedAt)
     setBannerImage(article.image || '')
+    clearLocalDraft()
     editorRef.current?.loadMarkdown(article.content)
     setShowSidebar(false)
   }, [currentHtml, title])
 
   // New article
   const handleNewArticle = useCallback(() => {
+    activeArticleSlugRef.current = undefined
     setTitle('')
     setCurrentSlug(undefined)
     setCurrentPublishedAt(undefined)
     setBannerImage('')
+    setCurrentHtml('')
+    setWordCount(0)
     editorRef.current?.clear()
     setShowSidebar(false)
-    localStorage.removeItem('samizdat_draft_title')
-    localStorage.removeItem('samizdat_draft_content')
-    localStorage.removeItem('samizdat_draft_banner')
+    clearLocalDraft()
   }, [])
 
   // Dismiss publish result
